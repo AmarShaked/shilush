@@ -31,6 +31,8 @@ export interface StudyMeta {
   extraDefaultOn: boolean;
   /** Tanakh studies show per-chapter headings and gematria verse numbers. */
   numbered: boolean;
+  /** Flat studies (e.g. Rambam) that still number each segment sequentially (halachot). */
+  numberSegments?: boolean;
 }
 
 /** A study resolved for a specific date: which reference to read. */

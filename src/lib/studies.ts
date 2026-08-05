@@ -35,6 +35,7 @@ export const STUDIES: StudyMeta[] = [
     color: "#5f6f96",
     extraDefaultOn: false,
     numbered: false,
+    numberSegments: true, // number each halacha (א, ב, …)
   },
 ];
 

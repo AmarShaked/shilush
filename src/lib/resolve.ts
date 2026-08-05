@@ -77,7 +77,11 @@ async function buildFlatSections(
   wantExtra: boolean
 ): Promise<StudySection[]> {
   const meta = getStudy(id);
-  const { segments, heRef } = await fetchSegments(item.ref!);
+  const raw = await fetchSegments(item.ref!);
+  const heRef = raw.heRef;
+  const segments = meta?.numberSegments
+    ? raw.segments.map((s, i) => ({ ...s, num: i + 1 }))
+    : raw.segments;
 
   let extra: ExtraText | undefined;
   if (wantExtra && meta?.extra) {
