@@ -3,7 +3,7 @@
 // only the text itself is fetched from Sefaria (sefaria.ts).
 
 import { fetchSegments, fetchTanakh } from "./sefaria";
-import { dafYomiRef, nachChapters, dailyAliyah } from "./hebcal";
+import { dafYomiRef, nachChapters, dailyAliyah, rambamChapter } from "./hebcal";
 import { STUDIES, getStudy } from "./studies";
 import { hebrewNumeral } from "./dates";
 import type {
@@ -21,10 +21,12 @@ type RefItem = { ref: string | null; heRef: string | null };
 function resolveRefs(iso: string): Record<StudyId, RefItem[]> {
   const daf = dafYomiRef(iso);
   const aliyah = dailyAliyah(iso); // Shnayim Mikra: only today's aliyah of the parasha
+  const rambam = rambamChapter(iso);
   return {
     daf: daf.ref ? [daf] : [],
     nach: nachChapters(iso),
     shnayim: aliyah ? [aliyah] : [],
+    rambam: rambam.ref ? [rambam] : [],
   };
 }
 

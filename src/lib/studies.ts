@@ -29,6 +29,13 @@ export const STUDIES: StudyMeta[] = [
     extraDefaultOn: true,
     numbered: true,
   },
+  {
+    id: "rambam",
+    name: "רמב״ם יומי",
+    color: "#5f6f96",
+    extraDefaultOn: false,
+    numbered: false,
+  },
 ];
 
 export function getStudy(id: StudyId): StudyMeta | undefined {
@@ -36,5 +43,5 @@ export function getStudy(id: StudyId): StudyMeta | undefined {
 }
 
 export function isStudyId(v: string): v is StudyId {
-  return v === "daf" || v === "nach" || v === "shnayim";
+  return v === "daf" || v === "nach" || v === "shnayim" || v === "rambam";
 }

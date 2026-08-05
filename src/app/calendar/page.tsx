@@ -23,6 +23,7 @@ const COLOR: Record<string, string> = {
   daf: "var(--daf)",
   nach: "var(--nach)",
   shnayim: "var(--shnayim)",
+  rambam: "var(--rambam)",
 };
 
 // Absolute day number of the 1st of the Hebrew month containing `iso`.
@@ -111,7 +112,7 @@ export default function CalendarPage() {
           const isToday = iso === today;
           const future = iso > today;
           const full = mounted && isDayComplete(iso);
-          const status = mounted ? dayStatus(iso) : { daf: false, nach: false, shnayim: false };
+          const status = mounted ? dayStatus(iso) : { daf: false, nach: false, shnayim: false, rambam: false };
           return (
             <button
               key={iso}

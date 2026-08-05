@@ -20,7 +20,7 @@ export const FONT_STEP = 0.1;
 
 const DEFAULTS: Settings = {
   fontScale: 1,
-  studies: { daf: true, nach: true, shnayim: true },
+  studies: { daf: true, nach: true, shnayim: true, rambam: false },
 };
 
 const listeners = new Set<() => void>();
@@ -51,6 +51,7 @@ function read(): Settings {
         daf: p.studies?.daf !== false,
         nach: p.studies?.nach !== false,
         shnayim: p.studies?.shnayim !== false,
+        rambam: p.studies?.rambam === true, // default off
       },
     };
   } catch {

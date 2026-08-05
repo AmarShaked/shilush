@@ -87,6 +87,7 @@ export function dayStatus(date: string): Record<StudyId, boolean> {
     daf: !!day.daf,
     nach: !!day.nach,
     shnayim: !!day.shnayim,
+    rambam: !!day.rambam,
   };
 }
 

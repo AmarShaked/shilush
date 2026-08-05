@@ -6,7 +6,14 @@
 // daf / chapters / aliyah to learn — is derived here, offline.
 
 import { HDate, getSedra, Locale } from "@hebcal/core";
-import { DafYomi, DafYomiEvent, NachYomiIndex, NachYomiEvent } from "@hebcal/learning";
+import {
+  DafYomi,
+  DafYomiEvent,
+  NachYomiIndex,
+  NachYomiEvent,
+  dailyRambam1,
+  DailyRambamEvent,
+} from "@hebcal/learning";
 import { getLeyningForParsha } from "@hebcal/leyning";
 import { diffDays } from "./dates";
 
@@ -67,6 +74,19 @@ export function nachChapters(iso: string): RefItem[] {
     out.push({ ref: `${r.k} ${r.v}`, heRef });
   }
   return out;
+}
+
+/** Today's Daily Rambam chapter (Mishneh Torah, one perek a day). */
+export function rambamChapter(iso: string): RefItem {
+  const hd = hdFromISO(iso);
+  const r = dailyRambam1(hd);
+  let heRef: string | null = null;
+  try {
+    heRef = stripNikud(new DailyRambamEvent(hd, r).render("he")) || null;
+  } catch {
+    heRef = null;
+  }
+  return { ref: `Mishneh Torah, ${r.name} ${r.perek}`, heRef };
 }
 
 /** The daily Shnayim Mikra aliyah of the week's parasha, or null on a holiday week. */

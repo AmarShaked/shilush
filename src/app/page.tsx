@@ -31,7 +31,7 @@ export default function HomePage() {
 
   const streak = mounted ? currentStreak(today) : 0;
   const week = mounted ? currentWeek(today) : [];
-  const status = mounted ? dayStatus(today) : { daf: false, nach: false, shnayim: false };
+  const status = mounted ? dayStatus(today) : { daf: false, nach: false, shnayim: false, rambam: false };
 
   return (
     <main>

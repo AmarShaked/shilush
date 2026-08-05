@@ -1,6 +1,6 @@
 // Shared domain types for the Shilush daily-learning app.
 
-export type StudyId = "daf" | "nach" | "shnayim";
+export type StudyId = "daf" | "nach" | "shnayim" | "rambam";
 
 /** A single readable segment (verse / line) of Hebrew text. */
 export interface Segment {
