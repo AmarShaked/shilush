@@ -158,12 +158,6 @@ function ReaderInner() {
               </button>
             </div>
           )}
-          {isSteinsaltz && sections.some((s) => s.extra) && (
-            <div style={{ padding: "0 18px" }}>
-              <div className="extra-hint">הקש על פסוק כדי לפתוח את ביאור שטיינזלץ</div>
-            </div>
-          )}
-
           <div className="reader-body">
             {sections.map((sec, si) => (
               <section key={si}>
