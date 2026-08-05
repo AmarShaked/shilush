@@ -1,0 +1,56 @@
+import type { Metadata, Viewport } from "next";
+import "./globals.css";
+import BottomNav from "@/components/BottomNav";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+
+export const metadata: Metadata = {
+  title: "שילוש · לימוד יומי",
+  description: "דף יומי, נ״ך יומי, ושניים מקרא ואחד תרגום — הלימוד היומי שלך במקום אחד.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "שילוש",
+  },
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/icon-192.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f6efe0" },
+    { media: "(prefers-color-scheme: dark)", color: "#1d1710" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+};
+
+// Sets the theme before paint to avoid a flash of the wrong theme.
+const themeBootstrap = `
+(function(){
+  try {
+    var t = localStorage.getItem('shilush:theme');
+    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) {}
+})();
+`;
+
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <html lang="he" dir="rtl" suppressHydrationWarning>
+      <body>
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
+        <div className="app">{children}</div>
+        <BottomNav />
+        <ServiceWorkerRegister />
+      </body>
+    </html>
+  );
+}

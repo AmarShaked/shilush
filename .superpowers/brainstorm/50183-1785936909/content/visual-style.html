@@ -1,0 +1,158 @@
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&family=Assistant:wght@400;600;700&display=swap');
+
+.phones { display:flex; gap:24px; flex-wrap:wrap; justify-content:center; margin-top:12px; }
+.phone-wrap { display:flex; flex-direction:column; align-items:center; gap:12px; cursor:pointer; transition:transform .15s; }
+.phone-wrap:hover { transform:translateY(-4px); }
+.phone { width:270px; height:560px; border-radius:34px; padding:10px; background:#111; box-shadow:0 12px 40px rgba(0,0,0,.28); position:relative; }
+.phone.selected-mark { outline:3px solid #4caf50; outline-offset:4px; }
+.screen { width:100%; height:100%; border-radius:26px; overflow:hidden; position:relative; direction:rtl; text-align:right; display:flex; flex-direction:column; }
+.pick-label { font-weight:700; font-size:15px; }
+.pick-sub { font-size:12px; opacity:.7; }
+
+/* shared internal bits */
+.sprog { height:4px; width:100%; }
+.sprog > i { display:block; height:100%; width:62%; }
+.stop { padding:14px 16px 10px; }
+.sdate { font-size:12px; opacity:.75; display:flex; justify-content:space-between; align-items:center; }
+.stitle { font-size:19px; font-weight:700; margin-top:3px; }
+.stabs { display:flex; gap:6px; margin-top:12px; font-size:11px; }
+.stab { padding:5px 11px; border-radius:20px; white-space:nowrap; }
+.sbody { flex:1; overflow:hidden; padding:6px 16px; line-height:1.9; font-size:14.5px; position:relative; }
+.stz { margin-top:10px; padding:9px 11px; border-radius:12px; font-size:12px; line-height:1.7; }
+.stz b { font-size:10px; letter-spacing:.5px; }
+.snav { display:flex; justify-content:space-around; align-items:center; padding:10px 0 14px; font-size:10px; }
+.snav div { display:flex; flex-direction:column; align-items:center; gap:3px; }
+.dot { width:20px; height:20px; border-radius:6px; }
+.sdone { margin:0 16px 10px; padding:11px; border-radius:14px; text-align:center; font-weight:700; font-size:13px; }
+
+/* ===== A: Parchment / warm traditional ===== */
+.A .screen { background:#f6efe0; color:#3a2e1e; font-family:'Frank Ruhl Libre',serif; }
+.A .sprog { background:#e4d6b8; } .A .sprog>i{ background:#a9772e; }
+.A .stitle{ color:#5b4420; } .A .sdate{ font-family:'Assistant',sans-serif; }
+.A .stab{ background:#ece0c6; color:#6b5122; font-family:'Assistant',sans-serif; }
+.A .stab.on{ background:#a9772e; color:#fff; }
+.A .stz{ background:#efe4cc; border:1px solid #ddca9f; color:#5c4a2c; }
+.A .stz b{ color:#a9772e; font-family:'Assistant',sans-serif; }
+.A .sdone{ background:#a9772e; color:#fff; font-family:'Assistant',sans-serif; }
+.A .snav{ background:#efe6d2; color:#8a734a; font-family:'Assistant',sans-serif; }
+.A .dot{ background:#d8c295; } .A .snav .act .dot{ background:#a9772e; }
+
+/* ===== B: Modern calm / minimal ===== */
+.B .screen{ background:#ffffff; color:#233240; font-family:'Frank Ruhl Libre',serif; }
+.B .sprog{ background:#e7edf2; } .B .sprog>i{ background:#1f9e8f; }
+.B .stitle{ color:#123; } .B .sdate{ font-family:'Heebo',sans-serif; }
+.B .stab{ background:#eef4f3; color:#2b6b63; font-family:'Heebo',sans-serif; }
+.B .stab.on{ background:#1f9e8f; color:#fff; }
+.B .stz{ background:#f2f8f7; border:1px solid #d7ebe8; color:#2f4f4a; }
+.B .stz b{ color:#1f9e8f; font-family:'Heebo',sans-serif; }
+.B .sdone{ background:#1f9e8f; color:#fff; font-family:'Heebo',sans-serif; }
+.B .snav{ background:#fbfdfd; color:#8aa0a0; border-top:1px solid #eef2f2; font-family:'Heebo',sans-serif; }
+.B .dot{ background:#d5e3e1; } .B .snav .act .dot{ background:#1f9e8f; }
+
+/* ===== C: Night / focused dark ===== */
+.C .screen{ background:#161a24; color:#e7e2d6; font-family:'Frank Ruhl Libre',serif; }
+.C .sprog{ background:#2a2f3d; } .C .sprog>i{ background:#e0a842; }
+.C .stitle{ color:#f4ead2; } .C .sdate{ color:#9aa0b0; font-family:'Assistant',sans-serif; }
+.C .stab{ background:#232838; color:#c9c; color:#bfc6d6; font-family:'Assistant',sans-serif; }
+.C .stab.on{ background:#e0a842; color:#161a24; }
+.C .stz{ background:#1e2330; border:1px solid #333a4d; color:#cdd3e0; }
+.C .stz b{ color:#e0a842; font-family:'Assistant',sans-serif; }
+.C .sdone{ background:#e0a842; color:#1a1a1a; font-family:'Assistant',sans-serif; }
+.C .snav{ background:#12151d; color:#727a8c; font-family:'Assistant',sans-serif; }
+.C .dot{ background:#333a4d; } .C .snav .act .dot{ background:#e0a842; }
+</style>
+
+<h2>שלוש — הכיוון העיצובי</h2>
+<p class="subtitle">Same screen (the daily reader), three moods. Which feels right for your daily learning? Tap one — you can still mix ideas after.</p>
+
+<div class="phones">
+
+  <!-- A -->
+  <div class="phone-wrap" data-choice="parchment" onclick="toggleSelect(this)">
+    <div class="phone A">
+      <div class="screen">
+        <div class="sprog"><i></i></div>
+        <div class="stop">
+          <div class="sdate"><span>יום ג׳ · כ״א באב</span><span>◂ ▸</span></div>
+          <div class="stitle">דף יומי · ברכות ל״ה</div>
+          <div class="stabs">
+            <span class="stab on">דף יומי</span>
+            <span class="stab">נ״ך יומי</span>
+            <span class="stab">שנים מקרא</span>
+          </div>
+        </div>
+        <div class="sbody">
+          כיצד מברכין על הפירות? על פירות האילן הוא אומר בורא פרי העץ, חוץ מן היין, שעל היין הוא אומר בורא פרי הגפן…
+          <div class="stz"><b>ביאור שטיינזלץ</b><br>המשנה דנה בברכות הנהנין — הברכות שאדם מברך קודם שנהנה מן העולם.</div>
+        </div>
+        <div class="sdone">✓ סיימתי</div>
+        <div class="snav">
+          <div class="act"><span class="dot"></span>היום</div>
+          <div><span class="dot"></span>לוח שנה</div>
+          <div><span class="dot"></span>רצף</div>
+        </div>
+      </div>
+    </div>
+    <div><div class="pick-label">A · קלף חם / מסורתי</div><div class="pick-sub">Warm parchment, like a sefer</div></div>
+  </div>
+
+  <!-- B -->
+  <div class="phone-wrap" data-choice="modern" onclick="toggleSelect(this)">
+    <div class="phone B">
+      <div class="screen">
+        <div class="sprog"><i></i></div>
+        <div class="stop">
+          <div class="sdate"><span>יום ג׳ · כ״א באב</span><span>◂ ▸</span></div>
+          <div class="stitle">דף יומי · ברכות ל״ה</div>
+          <div class="stabs">
+            <span class="stab on">דף יומי</span>
+            <span class="stab">נ״ך יומי</span>
+            <span class="stab">שנים מקרא</span>
+          </div>
+        </div>
+        <div class="sbody">
+          כיצד מברכין על הפירות? על פירות האילן הוא אומר בורא פרי העץ, חוץ מן היין, שעל היין הוא אומר בורא פרי הגפן…
+          <div class="stz"><b>ביאור שטיינזלץ</b><br>המשנה דנה בברכות הנהנין — הברכות שאדם מברך קודם שנהנה מן העולם.</div>
+        </div>
+        <div class="sdone">✓ סיימתי</div>
+        <div class="snav">
+          <div class="act"><span class="dot"></span>היום</div>
+          <div><span class="dot"></span>לוח שנה</div>
+          <div><span class="dot"></span>רצף</div>
+        </div>
+      </div>
+    </div>
+    <div><div class="pick-label">B · מודרני רגוע</div><div class="pick-sub">Clean, calm, lots of air</div></div>
+  </div>
+
+  <!-- C -->
+  <div class="phone-wrap" data-choice="night" onclick="toggleSelect(this)">
+    <div class="phone C">
+      <div class="screen">
+        <div class="sprog"><i></i></div>
+        <div class="stop">
+          <div class="sdate"><span>יום ג׳ · כ״א באב</span><span>◂ ▸</span></div>
+          <div class="stitle">דף יומי · ברכות ל״ה</div>
+          <div class="stabs">
+            <span class="stab on">דף יומי</span>
+            <span class="stab">נ״ך יומי</span>
+            <span class="stab">שנים מקרא</span>
+          </div>
+        </div>
+        <div class="sbody">
+          כיצד מברכין על הפירות? על פירות האילן הוא אומר בורא פרי העץ, חוץ מן היין, שעל היין הוא אומר בורא פרי הגפן…
+          <div class="stz"><b>ביאור שטיינזלץ</b><br>המשנה דנה בברכות הנהנין — הברכות שאדם מברך קודם שנהנה מן העולם.</div>
+        </div>
+        <div class="sdone">✓ סיימתי</div>
+        <div class="snav">
+          <div class="act"><span class="dot"></span>היום</div>
+          <div><span class="dot"></span>לוח שנה</div>
+          <div><span class="dot"></span>רצף</div>
+        </div>
+      </div>
+    </div>
+    <div><div class="pick-label">C · לילה / ריכוז</div><div class="pick-sub">Dark, great for evening learning</div></div>
+  </div>
+
+</div>
