@@ -175,7 +175,6 @@ function ReaderInner() {
                         onClick={perush ? () => toggleVerse(i) : undefined}
                       >
                         {seg.he}
-                        {perush && <span className="pasuk-caret">﹀</span>}
                       </p>
                       {open && perush && (
                         <div className="steinsaltz">
