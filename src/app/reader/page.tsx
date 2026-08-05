@@ -108,15 +108,15 @@ function ReaderInner() {
       <div className="reader-head">
         <div className="reader-topline">
           <div className="date-nav">
-            {/* RTL: right glyph = previous day, left glyph = next day */}
+            {/* RTL: right button = previous day, left button = next day */}
             <button aria-label="יום קודם" onClick={() => setDate((d) => addDays(d, -1))}>
-              ›
+              ‹
             </button>
             <span>
               {hebrewWeekday(date)} · {hebrewDate(date)}
             </span>
             <button aria-label="יום הבא" onClick={() => setDate((d) => addDays(d, 1))}>
-              ‹
+              ›
             </button>
           </div>
         </div>
