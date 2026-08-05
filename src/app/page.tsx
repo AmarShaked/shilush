@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import ThemeToggle from "@/components/ThemeToggle";
 import { todayISO, hebrewWeekday, hebrewDate, fromISODate } from "@/lib/dates";
 import { currentStreak, dayStatus, currentWeek } from "@/lib/progressStore";
+import { isStudyEnabled } from "@/lib/settings";
 import { useProgressVersion, useHydrated } from "@/lib/useProgress";
+import { useSettingsVersion } from "@/lib/useSettings";
 import type { ResolvedDay } from "@/lib/types";
 
 const HE_DOW = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
@@ -13,6 +14,7 @@ const HE_DOW = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
 export default function HomePage() {
   const today = todayISO();
   useProgressVersion(); // re-render when completions change
+  useSettingsVersion(); // re-render when enabled studies change
   const mounted = useHydrated();
   const [day, setDay] = useState<ResolvedDay | null>(null);
 
@@ -34,14 +36,11 @@ export default function HomePage() {
   return (
     <main>
       <div className="page-pad">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div>
-            <div className="greeting">שלום 👋</div>
-            <div className="subdate">
-              {hebrewWeekday(today)} · {hebrewDate(today)}
-            </div>
+        <div>
+          <div className="greeting">שלום 👋</div>
+          <div className="subdate">
+            {hebrewWeekday(today)} · {hebrewDate(today)}
           </div>
-          <ThemeToggle />
         </div>
 
         <Link href="/streak" className="streak-card" style={{ display: "block", marginTop: 14 }}>
@@ -61,7 +60,9 @@ export default function HomePage() {
         {!day ? (
           <div className="spinner" />
         ) : (
-          day.studies.map((s) => {
+          day.studies
+            .filter((s) => isStudyEnabled(s.id))
+            .map((s) => {
             const done = status[s.id];
             return (
               <Link

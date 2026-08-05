@@ -2,8 +2,8 @@
 // This is the single storage boundary — a future synced backend would implement
 // the same read/write surface without touching the screens.
 
-import { STUDIES } from "./studies";
 import { addDays, diffDays, fromISODate, todayISO } from "./dates";
+import { getEnabledStudyIds } from "./settings";
 import type { StudyId } from "./types";
 
 const KEY = "shilush:progress:v1";
@@ -90,15 +90,17 @@ export function dayStatus(date: string): Record<StudyId, boolean> {
   };
 }
 
-/** How many of the day's studies are complete. */
+/** How many of the day's enabled studies are complete. */
 export function dayCount(date: string): number {
   const s = dayStatus(date);
-  return STUDIES.reduce((n, m) => n + (s[m.id] ? 1 : 0), 0);
+  return getEnabledStudyIds().reduce((n, id) => n + (s[id] ? 1 : 0), 0);
 }
 
-/** A day is fully complete when every active study is complete. */
+/** A day is fully complete when every enabled study is complete. */
 export function isDayComplete(date: string): boolean {
-  return dayCount(date) === STUDIES.length;
+  const enabled = getEnabledStudyIds();
+  const s = dayStatus(date);
+  return enabled.length > 0 && enabled.every((id) => s[id]);
 }
 
 /**

@@ -1,6 +1,5 @@
 "use client";
 
-import ThemeToggle from "@/components/ThemeToggle";
 import { todayISO, hebrewDate, hebrewWeekday, fromISODate } from "@/lib/dates";
 import {
   currentStreak,
@@ -24,14 +23,11 @@ export default function StreakPage() {
 
   return (
     <main className="page-pad">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div>
-          <div className="greeting">הרצף שלי</div>
-          <div className="subdate">
-            {hebrewWeekday(today)} · {hebrewDate(today)}
-          </div>
+      <div>
+        <div className="greeting">הרצף שלי</div>
+        <div className="subdate">
+          {hebrewWeekday(today)} · {hebrewDate(today)}
         </div>
-        <ThemeToggle />
       </div>
 
       <div className="streak-card" style={{ marginTop: 14 }}>

@@ -36,6 +36,9 @@ const themeBootstrap = `
     var t = localStorage.getItem('shilush:theme');
     if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', t);
+    var st = JSON.parse(localStorage.getItem('shilush:settings:v1') || '{}');
+    var fs = typeof st.fontScale === 'number' ? st.fontScale : 1;
+    document.documentElement.style.setProperty('--reader-scale', String(fs));
   } catch (e) {}
 })();
 `;

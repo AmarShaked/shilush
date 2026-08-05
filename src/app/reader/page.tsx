@@ -1,11 +1,13 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { STUDIES, getStudy, isStudyId } from "@/lib/studies";
 import { todayISO, addDays, hebrewWeekday, hebrewDate, hebrewNumeral } from "@/lib/dates";
 import { isComplete, setComplete } from "@/lib/progressStore";
-import { useProgressVersion } from "@/lib/useProgress";
+import { getEnabledStudyIds } from "@/lib/settings";
+import { useProgressVersion, useHydrated } from "@/lib/useProgress";
+import { useSettingsVersion } from "@/lib/useSettings";
 import type { Segment, StudyContent, StudyId } from "@/lib/types";
 
 function VerseNum({ seg }: { seg: Segment }) {
@@ -27,46 +29,60 @@ function ReaderInner() {
     map: {},
   });
 
-  const meta = getStudy(studyId)!;
-
   useProgressVersion();
+  const settingsVersion = useSettingsVersion();
+  const hydrated = useHydrated();
+  // Only enabled studies are shown; if the URL points at a disabled one, fall
+  // back to the first enabled study. Before hydration, assume all enabled (SSR).
+  const enabledIds = useMemo(
+    () => (hydrated ? getEnabledStudyIds() : STUDIES.map((s) => s.id)),
+    // settingsVersion is the signal that the enabled set changed in localStorage.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [hydrated, settingsVersion]
+  );
+  const activeId = useMemo<StudyId>(
+    () => (enabledIds.includes(studyId) ? studyId : enabledIds[0] ?? studyId),
+    [enabledIds, studyId]
+  );
+  const meta = getStudy(activeId)!;
+
   const progressBar = useRef<HTMLDivElement>(null);
   const autoDone = useRef(false);
 
   useEffect(() => {
-    window.history.replaceState(null, "", `/reader?date=${date}&id=${studyId}`);
-  }, [date, studyId]);
+    window.history.replaceState(null, "", `/reader?date=${date}&id=${activeId}`);
+  }, [date, activeId]);
 
   useEffect(() => {
-    const key = `${date}:${studyId}`;
+    const key = `${date}:${activeId}`;
     let alive = true;
     autoDone.current = false;
     window.scrollTo(0, 0);
     if (progressBar.current) progressBar.current.style.width = "0%";
 
-    const wantExtra = !!getStudy(studyId)!.extra;
-    fetch(`/api/study?date=${date}&id=${studyId}&extra=${wantExtra ? 1 : 0}`)
+    const wantExtra = !!getStudy(activeId)!.extra;
+    fetch(`/api/study?date=${date}&id=${activeId}&extra=${wantExtra ? 1 : 0}`)
       .then((r) => r.json())
       .then((c: StudyContent) => {
         if (alive) setLoaded({ key, data: c });
       })
       .catch(() => {
         if (!alive) return;
-        const m = getStudy(studyId)!;
+        const m = getStudy(activeId)!;
         setLoaded({
           key,
-          data: { id: studyId, name: m.name, color: m.color, ref: null, heRef: null, sections: [] },
+          data: { id: activeId, name: m.name, color: m.color, ref: null, heRef: null, sections: [] },
         });
       });
     return () => {
       alive = false;
     };
-  }, [date, studyId]);
+  }, [date, activeId]);
 
-  const key = `${date}:${studyId}`;
+  const key = `${date}:${activeId}`;
   const loading = !loaded || loaded.key !== key;
   const content = loading ? null : loaded!.data;
-  const done = isComplete(date, studyId);
+  const done = isComplete(date, activeId);
 
   const expanded = expandedState.key === key ? expandedState.map : {};
   function toggleVerse(vk: string) {
@@ -83,9 +99,9 @@ function ReaderInner() {
     if (progressBar.current) progressBar.current.style.width = `${pct * 100}%`;
     if (!autoDone.current && scrollable > 60 && pct >= 0.98) {
       autoDone.current = true;
-      setComplete(date, studyId, true);
+      setComplete(date, activeId, true);
     }
-  }, [date, studyId]);
+  }, [date, activeId]);
 
   useEffect(() => {
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -121,10 +137,10 @@ function ReaderInner() {
         </div>
         <div className="reader-title">{title}</div>
         <div className="tabs">
-          {STUDIES.map((s) => (
+          {STUDIES.filter((s) => enabledIds.includes(s.id)).map((s) => (
             <button
               key={s.id}
-              className={`tab${s.id === studyId ? " on" : ""}`}
+              className={`tab${s.id === activeId ? " on" : ""}`}
               style={{ "--accent": s.color } as React.CSSProperties}
               onClick={() => setStudyId(s.id)}
             >
@@ -198,7 +214,7 @@ function ReaderInner() {
 
           <button
             className={`done-btn${done ? " is-done" : ""}`}
-            onClick={() => setComplete(date, studyId, !done)}
+            onClick={() => setComplete(date, activeId, !done)}
           >
             {done ? "✓ סומן כהושלם" : "סיימתי"}
           </button>

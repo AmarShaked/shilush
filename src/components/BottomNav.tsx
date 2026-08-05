@@ -7,6 +7,7 @@ const ITEMS = [
   { href: "/", label: "היום", icon: "📖" },
   { href: "/calendar", label: "לוח שנה", icon: "🗓" },
   { href: "/streak", label: "רצף", icon: "🔥" },
+  { href: "/settings", label: "הגדרות", icon: "⚙️" },
 ];
 
 export default function BottomNav() {

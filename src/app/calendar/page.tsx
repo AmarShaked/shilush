@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { STUDIES } from "@/lib/studies";
 import { toISODate, todayISO, hebrewMonthLabel, gregorianMonthLabel } from "@/lib/dates";
 import { dayStatus, isDayComplete } from "@/lib/progressStore";
+import { isStudyEnabled } from "@/lib/settings";
 import { useProgressVersion, useHydrated } from "@/lib/useProgress";
+import { useSettingsVersion } from "@/lib/useSettings";
 
 const HE_DOW = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
 const COLOR: Record<string, string> = {
@@ -17,7 +19,9 @@ const COLOR: Record<string, string> = {
 export default function CalendarPage() {
   const router = useRouter();
   useProgressVersion();
+  useSettingsVersion();
   const mounted = useHydrated();
+  const enabledStudies = mounted ? STUDIES.filter((s) => isStudyEnabled(s.id)) : STUDIES;
   const dateInput = useRef<HTMLInputElement>(null);
 
   const now = new Date();
@@ -94,7 +98,7 @@ export default function CalendarPage() {
             >
               <span>{dayNum}</span>
               <span className="cal-dots">
-                {STUDIES.map((s) =>
+                {enabledStudies.map((s) =>
                   status[s.id] ? (
                     <i key={s.id} style={{ background: COLOR[s.id] }} />
                   ) : null
@@ -106,7 +110,7 @@ export default function CalendarPage() {
       </div>
 
       <div className="legend">
-        {STUDIES.map((s) => (
+        {enabledStudies.map((s) => (
           <span key={s.id}>
             <i style={{ background: COLOR[s.id] }} />
             {s.name}
