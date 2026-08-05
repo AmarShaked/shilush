@@ -2,7 +2,7 @@
 // Server-side: combines Sefaria (Daf, Parasha, texts) and Hebcal (Nach Yomi).
 
 import { fetchCalendars, fetchSegments, fetchTanakh } from "./sefaria";
-import { fetchNachChapters } from "./hebcal";
+import { fetchNachChapters, fetchDailyAliyah } from "./hebcal";
 import { STUDIES, getStudy } from "./studies";
 import { hebrewNumeral } from "./dates";
 import type {
@@ -16,13 +16,17 @@ import type {
 
 type RefItem = { ref: string | null; heRef: string | null };
 
-/** Per-study ordered list of references for a date (Nach has two). */
+/** Per-study ordered list of references for a date (Nach has two chapters). */
 async function resolveRefs(iso: string): Promise<Record<StudyId, RefItem[]>> {
-  const [cal, nach] = await Promise.all([fetchCalendars(iso), fetchNachChapters(iso)]);
+  const [cal, nach, aliyah] = await Promise.all([
+    fetchCalendars(iso),
+    fetchNachChapters(iso),
+    fetchDailyAliyah(iso), // Shnayim Mikra: only today's aliyah of the parasha
+  ]);
   return {
     daf: cal.daf.ref ? [cal.daf] : [],
     nach,
-    shnayim: cal.parasha.ref ? [cal.parasha] : [],
+    shnayim: aliyah?.ref ? [{ ref: aliyah.ref, heRef: aliyah.heRef }] : [],
   };
 }
 
