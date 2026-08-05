@@ -21,7 +21,6 @@ function ReaderInner() {
   const [date, setDate] = useState(initialDate);
   const [studyId, setStudyId] = useState<StudyId>(isStudyId(initialId) ? initialId : "daf");
   const [loaded, setLoaded] = useState<{ key: string; data: StudyContent } | null>(null);
-  const [extraByStudy, setExtraByStudy] = useState<Partial<Record<StudyId, boolean>>>({});
   // Expanded Steinsaltz pesukim, keyed "sectionIndex:verseIndex", scoped to current day+study.
   const [expandedState, setExpandedState] = useState<{ key: string; map: Record<string, boolean> }>({
     key: "",
@@ -29,7 +28,6 @@ function ReaderInner() {
   });
 
   const meta = getStudy(studyId)!;
-  const extraOn = extraByStudy[studyId] ?? meta.extraDefaultOn;
 
   useProgressVersion();
   const progressBar = useRef<HTMLDivElement>(null);
@@ -100,7 +98,6 @@ function ReaderInner() {
   const title = content?.heRef ?? content?.ref ?? meta.name;
   const isTargum = meta.extra === "targum";
   const isSteinsaltz = meta.extra === "steinsaltz";
-  const showTargum = extraOn && isTargum;
   const showHeadings = meta.numbered || sections.length > 1;
 
   return (
@@ -147,17 +144,6 @@ function ReaderInner() {
         </div>
       ) : (
         <>
-          {isTargum && sections[0]?.extra && (
-            <div style={{ padding: "0 18px" }}>
-              <button
-                className={`extra-toggle${extraOn ? " on" : ""}`}
-                onClick={() => setExtraByStudy((m) => ({ ...m, [studyId]: !extraOn }))}
-              >
-                {extraOn ? "✓ " : ""}
-                {sections[0].extra.label}
-              </button>
-            </div>
-          )}
           <div className="reader-body">
             {sections.map((sec, si) => (
               <section key={si}>
@@ -186,11 +172,15 @@ function ReaderInner() {
                         </div>
                       );
                     })
-                  : showTargum
+                  : isTargum
                     ? sec.segments.map((seg, i) => (
-                        <div key={i} className="verse">
-                          <VerseNum seg={seg} />
-                          {seg.he}
+                        <div key={i} className="smt-verse">
+                          {/* Shnayim Mikra: read the pasuk twice, then Targum once. */}
+                          <p className="verse">
+                            <VerseNum seg={seg} />
+                            {seg.he}
+                          </p>
+                          <p className="verse verse-repeat">{seg.he}</p>
                           {sec.extra?.segments[i] && (
                             <span className="targum">{sec.extra.segments[i].he}</span>
                           )}

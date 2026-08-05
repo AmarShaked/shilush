@@ -6,7 +6,7 @@ import {
   currentStreak,
   bestStreak,
   totalDaysComplete,
-  lastWeek,
+  currentWeek,
 } from "@/lib/progressStore";
 import { useProgressVersion, useHydrated } from "@/lib/useProgress";
 
@@ -20,7 +20,7 @@ export default function StreakPage() {
   const streak = mounted ? currentStreak(today) : 0;
   const best = mounted ? bestStreak() : 0;
   const total = mounted ? totalDaysComplete() : 0;
-  const week = mounted ? lastWeek(today) : [];
+  const week = mounted ? currentWeek(today) : [];
 
   return (
     <main className="page-pad">

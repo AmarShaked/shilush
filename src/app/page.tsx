@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
 import { todayISO, hebrewWeekday, hebrewDate, fromISODate } from "@/lib/dates";
-import { currentStreak, dayStatus, lastWeek } from "@/lib/progressStore";
+import { currentStreak, dayStatus, currentWeek } from "@/lib/progressStore";
 import { useProgressVersion, useHydrated } from "@/lib/useProgress";
 import type { ResolvedDay } from "@/lib/types";
 
@@ -28,7 +28,7 @@ export default function HomePage() {
   }, [today]);
 
   const streak = mounted ? currentStreak(today) : 0;
-  const week = mounted ? lastWeek(today) : [];
+  const week = mounted ? currentWeek(today) : [];
   const status = mounted ? dayStatus(today) : { daf: false, nach: false, shnayim: false };
 
   return (

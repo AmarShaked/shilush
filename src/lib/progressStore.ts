@@ -3,7 +3,7 @@
 // the same read/write surface without touching the screens.
 
 import { STUDIES } from "./studies";
-import { addDays, diffDays, todayISO } from "./dates";
+import { addDays, diffDays, fromISODate, todayISO } from "./dates";
 import type { StudyId } from "./types";
 
 const KEY = "shilush:progress:v1";
@@ -140,11 +140,12 @@ export function bestStreak(): number {
   return best;
 }
 
-/** Completion flags for the last 7 days (oldest first), for the week dot row. */
-export function lastWeek(today: string = todayISO()): { date: string; done: boolean }[] {
+/** The current week, Sunday → Saturday, with completion flags (for the week row). */
+export function currentWeek(today: string = todayISO()): { date: string; done: boolean }[] {
+  const sunday = addDays(today, -fromISODate(today).getDay()); // getDay: 0 = Sunday
   const out: { date: string; done: boolean }[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = addDays(today, -i);
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(sunday, i);
     out.push({ date: d, done: isDayComplete(d) });
   }
   return out;

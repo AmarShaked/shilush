@@ -328,6 +328,15 @@ button {
 .verse {
   margin-bottom: 6px;
 }
+.smt-verse {
+  margin-bottom: 16px;
+}
+.smt-verse .verse {
+  margin-bottom: 2px;
+}
+.verse-repeat {
+  opacity: 0.72;
+}
 .verse .num {
   font-size: 12px;
   color: var(--faint);
@@ -336,13 +345,9 @@ button {
 }
 .targum {
   display: block;
-  margin: 4px 0 14px;
-  padding: 8px 12px;
-  border-right: 3px solid var(--shnayim);
-  background: var(--surface-2);
-  border-radius: 8px;
-  font-size: 15.5px;
-  line-height: 1.85;
+  margin: 2px 0 0;
+  font-size: 16px;
+  line-height: 1.9;
   color: var(--muted);
 }
 .chapter-heading {
