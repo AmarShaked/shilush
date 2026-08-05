@@ -43,8 +43,11 @@ const HE_ONES = ["", "א", "ב", "ג", "ד", "ה", "ו", "ז", "ח", "ט"];
 const HE_TENS = ["", "י", "כ", "ל", "מ", "נ", "ס", "ע", "פ", "צ"];
 const HE_HUND = ["", "ק", "ר", "ש", "ת", "תק", "תר", "תש", "תת", "תתק"];
 
-/** Convert a number to a Hebrew gematria numeral, e.g. 22 -> "כ״ב", 786 -> "תשפ״ו". */
-export function hebrewNumeral(num: number): string {
+/**
+ * Convert a number to a Hebrew gematria numeral, e.g. 22 -> "כ״ב", 786 -> "תשפ״ו".
+ * Pass punctuate=false for bare letters like verse numbers, e.g. 26 -> "כו".
+ */
+export function hebrewNumeral(num: number, punctuate = true): string {
   const n = num % 1000;
   let s = HE_HUND[Math.floor(n / 100)];
   const rest = n % 100;
@@ -52,6 +55,7 @@ export function hebrewNumeral(num: number): string {
   else if (rest === 16) s += "טז";
   else s += HE_TENS[Math.floor(rest / 10)] + HE_ONES[rest % 10];
   if (s.length === 0) return String(num);
+  if (!punctuate) return s;
   if (s.length === 1) return s + "׳"; // geresh
   return s.slice(0, -1) + "״" + s.slice(-1); // gershayim before last letter
 }

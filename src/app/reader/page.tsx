@@ -3,10 +3,15 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { STUDIES, getStudy, isStudyId } from "@/lib/studies";
-import { todayISO, addDays, hebrewWeekday, hebrewDate } from "@/lib/dates";
+import { todayISO, addDays, hebrewWeekday, hebrewDate, hebrewNumeral } from "@/lib/dates";
 import { isComplete, setComplete } from "@/lib/progressStore";
 import { useProgressVersion } from "@/lib/useProgress";
-import type { StudyContent, StudyId } from "@/lib/types";
+import type { Segment, StudyContent, StudyId } from "@/lib/types";
+
+function VerseNum({ seg }: { seg: Segment }) {
+  if (seg.num == null) return null;
+  return <span className="pnum">{hebrewNumeral(seg.num, false)}</span>;
+}
 
 function ReaderInner() {
   const params = useSearchParams();
@@ -15,12 +20,10 @@ function ReaderInner() {
 
   const [date, setDate] = useState(initialDate);
   const [studyId, setStudyId] = useState<StudyId>(isStudyId(initialId) ? initialId : "daf");
-  // Fetched content, tagged with the key it belongs to so we can tell stale from fresh.
   const [loaded, setLoaded] = useState<{ key: string; data: StudyContent } | null>(null);
-  // Per-study override of the extra toggle; falls back to each study's default.
   const [extraByStudy, setExtraByStudy] = useState<Partial<Record<StudyId, boolean>>>({});
-  // Which pesukim have their Steinsaltz perush expanded, scoped to the current day+study.
-  const [expandedState, setExpandedState] = useState<{ key: string; map: Record<number, boolean> }>({
+  // Expanded Steinsaltz pesukim, keyed "sectionIndex:verseIndex", scoped to current day+study.
+  const [expandedState, setExpandedState] = useState<{ key: string; map: Record<string, boolean> }>({
     key: "",
     map: {},
   });
@@ -32,13 +35,10 @@ function ReaderInner() {
   const progressBar = useRef<HTMLDivElement>(null);
   const autoDone = useRef(false);
 
-  // Keep the URL in sync for shareable/bookmarkable links.
   useEffect(() => {
     window.history.replaceState(null, "", `/reader?date=${date}&id=${studyId}`);
   }, [date, studyId]);
 
-  // Fetch content when date/study changes. Always request the extra material
-  // (Steinsaltz/Targum) so the toggle is instant; the toggle only controls display.
   useEffect(() => {
     const key = `${date}:${studyId}`;
     let alive = true;
@@ -57,7 +57,7 @@ function ReaderInner() {
         const m = getStudy(studyId)!;
         setLoaded({
           key,
-          data: { id: studyId, name: m.name, color: m.color, ref: null, heRef: null, segments: [] },
+          data: { id: studyId, name: m.name, color: m.color, ref: null, heRef: null, sections: [] },
         });
       });
     return () => {
@@ -71,14 +71,13 @@ function ReaderInner() {
   const done = isComplete(date, studyId);
 
   const expanded = expandedState.key === key ? expandedState.map : {};
-  function toggleVerse(i: number) {
+  function toggleVerse(vk: string) {
     setExpandedState((prev) => {
       const base = prev.key === key ? prev.map : {};
-      return { key, map: { ...base, [i]: !base[i] } };
+      return { key, map: { ...base, [vk]: !base[vk] } };
     });
   }
 
-  // Scroll-progress bar + auto-complete on reaching the end.
   const onScroll = useCallback(() => {
     const doc = document.documentElement;
     const scrollable = doc.scrollHeight - window.innerHeight;
@@ -96,11 +95,13 @@ function ReaderInner() {
     return () => window.removeEventListener("scroll", onScroll);
   }, [onScroll]);
 
+  const sections = content?.sections ?? [];
+  const hasText = sections.some((s) => s.segments.length > 0);
   const title = content?.heRef ?? content?.ref ?? meta.name;
-  const hasText = !!content && content.segments.length > 0;
-  const showTargum = extraOn && content?.extra?.kind === "targum";
-  // Steinsaltz is always available — every pasuk is tappable, no toggle needed.
-  const showSteinsaltzVerses = content?.extra?.kind === "steinsaltz";
+  const isTargum = meta.extra === "targum";
+  const isSteinsaltz = meta.extra === "steinsaltz";
+  const showTargum = extraOn && isTargum;
+  const showHeadings = meta.numbered || sections.length > 1;
 
   return (
     <main style={{ "--accent": meta.color } as React.CSSProperties}>
@@ -146,59 +147,69 @@ function ReaderInner() {
         </div>
       ) : (
         <>
-          {content?.extra?.kind === "targum" && (
+          {isTargum && sections[0]?.extra && (
             <div style={{ padding: "0 18px" }}>
               <button
                 className={`extra-toggle${extraOn ? " on" : ""}`}
                 onClick={() => setExtraByStudy((m) => ({ ...m, [studyId]: !extraOn }))}
               >
                 {extraOn ? "✓ " : ""}
-                {content.extra.label}
+                {sections[0].extra.label}
               </button>
             </div>
           )}
-          {showSteinsaltzVerses && (
+          {isSteinsaltz && sections.some((s) => s.extra) && (
             <div style={{ padding: "0 18px" }}>
               <div className="extra-hint">הקש על פסוק כדי לפתוח את ביאור שטיינזלץ</div>
             </div>
           )}
 
           <div className="reader-body">
-            {showSteinsaltzVerses
-              ? content!.segments.map((seg, i) => {
-                  const perush = content!.extra!.segments[i];
-                  const open = !!expanded[i];
-                  return (
-                    <div key={i} className={`pasuk${open ? " open" : ""}`}>
-                      <p
-                        className={`pasuk-text${perush ? " tappable" : ""}`}
-                        onClick={perush ? () => toggleVerse(i) : undefined}
-                      >
-                        {seg.he}
-                      </p>
-                      {open && perush && (
-                        <div className="steinsaltz">
-                          <span className="lbl">{content!.extra!.label}</span>
-                          <p style={{ margin: 0 }}>{perush.he}</p>
+            {sections.map((sec, si) => (
+              <section key={si}>
+                {showHeadings && sec.heRef && <h2 className="chapter-heading">{sec.heRef}</h2>}
+
+                {isSteinsaltz
+                  ? sec.segments.map((seg, i) => {
+                      const perush = sec.extra?.segments[i];
+                      const vk = `${si}:${i}`;
+                      const open = !!expanded[vk];
+                      return (
+                        <div key={i} className={`pasuk${open ? " open" : ""}`}>
+                          <p
+                            className={`pasuk-text${perush ? " tappable" : ""}`}
+                            onClick={perush ? () => toggleVerse(vk) : undefined}
+                          >
+                            <VerseNum seg={seg} />
+                            {seg.he}
+                          </p>
+                          {open && perush && (
+                            <div className="steinsaltz">
+                              <span className="lbl">{sec.extra!.label}</span>
+                              <p style={{ margin: 0 }}>{perush.he}</p>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })
-              : showTargum
-                ? content!.segments.map((seg, i) => (
-                    <div key={i} className="verse">
-                      {seg.he}
-                      {content!.extra!.segments[i] && (
-                        <span className="targum">{content!.extra!.segments[i].he}</span>
-                      )}
-                    </div>
-                  ))
-                : content!.segments.map((seg, i) => (
-                    <p key={i} className="verse">
-                      {seg.he}
-                    </p>
-                  ))}
+                      );
+                    })
+                  : showTargum
+                    ? sec.segments.map((seg, i) => (
+                        <div key={i} className="verse">
+                          <VerseNum seg={seg} />
+                          {seg.he}
+                          {sec.extra?.segments[i] && (
+                            <span className="targum">{sec.extra.segments[i].he}</span>
+                          )}
+                        </div>
+                      ))
+                    : sec.segments.map((seg, i) => (
+                        <p key={i} className="verse">
+                          <VerseNum seg={seg} />
+                          {seg.he}
+                        </p>
+                      ))}
+              </section>
+            ))}
           </div>
 
           <button

@@ -1,35 +1,54 @@
 // Resolves studies for a date into references and full text.
 // Server-side: combines Sefaria (Daf, Parasha, texts) and Hebcal (Nach Yomi).
 
-import { fetchCalendars, fetchSegments } from "./sefaria";
-import { fetchNachYomi } from "./hebcal";
+import { fetchCalendars, fetchSegments, fetchTanakh } from "./sefaria";
+import { fetchNachChapters } from "./hebcal";
 import { STUDIES, getStudy } from "./studies";
+import { hebrewNumeral } from "./dates";
 import type {
   ExtraText,
   ResolvedDay,
   ResolvedStudy,
   StudyContent,
   StudyId,
+  StudySection,
 } from "./types";
 
-/** Resolve the three studies (refs + Hebrew display refs) for an ISO date. */
-export async function resolveDay(iso: string): Promise<ResolvedDay> {
-  const [cal, nach] = await Promise.all([fetchCalendars(iso), fetchNachYomi(iso)]);
+type RefItem = { ref: string | null; heRef: string | null };
 
-  const refByStudy: Record<StudyId, { ref: string | null; heRef: string | null }> = {
-    daf: cal.daf,
+/** Per-study ordered list of references for a date (Nach has two). */
+async function resolveRefs(iso: string): Promise<Record<StudyId, RefItem[]>> {
+  const [cal, nach] = await Promise.all([fetchCalendars(iso), fetchNachChapters(iso)]);
+  return {
+    daf: cal.daf.ref ? [cal.daf] : [],
     nach,
-    shnayim: cal.parasha,
+    shnayim: cal.parasha.ref ? [cal.parasha] : [],
   };
+}
 
-  const studies: ResolvedStudy[] = STUDIES.map((meta) => ({
-    id: meta.id,
-    name: meta.name,
-    color: meta.color,
-    ref: refByStudy[meta.id].ref,
-    heRef: refByStudy[meta.id].heRef,
-  }));
+/** Build a single Hebrew display label from one or more references. */
+function combineHeRefs(list: RefItem[]): string | null {
+  const hes = list.map((l) => l.heRef).filter(Boolean) as string[];
+  if (hes.length === 0) return null;
+  if (hes.length === 1) return hes[0];
+  return `${hes[0]} – ${hes[hes.length - 1]}`;
+}
 
+function toResolvedStudy(id: StudyId, list: RefItem[]): ResolvedStudy {
+  const meta = getStudy(id);
+  return {
+    id,
+    name: meta?.name ?? id,
+    color: meta?.color ?? "#a9772e",
+    ref: list[0]?.ref ?? null,
+    heRef: combineHeRefs(list),
+  };
+}
+
+/** Resolve the studies (display refs) for an ISO date. */
+export async function resolveDay(iso: string): Promise<ResolvedDay> {
+  const refs = await resolveRefs(iso);
+  const studies = STUDIES.map((meta) => toResolvedStudy(meta.id, refs[meta.id]));
   return { date: iso, studies };
 }
 
@@ -47,53 +66,81 @@ const EXTRA_LABEL: Record<"steinsaltz" | "targum", string> = {
   targum: "תרגום אונקלוס",
 };
 
-/**
- * Resolve one study for a date into full readable content.
- * `wantExtra` controls whether the Steinsaltz/Targum text is fetched.
- */
+/** Talmud (unnumbered): a single flat section, extra aligned by segment index. */
+async function buildFlatSections(
+  id: StudyId,
+  item: RefItem,
+  wantExtra: boolean
+): Promise<StudySection[]> {
+  const meta = getStudy(id);
+  const { segments, heRef } = await fetchSegments(item.ref!);
+
+  let extra: ExtraText | undefined;
+  if (wantExtra && meta?.extra) {
+    const er = extraRef(id, item.ref!);
+    if (er) {
+      const r = await fetchSegments(er);
+      if (r.segments.length > 0) {
+        extra = { kind: meta.extra, label: EXTRA_LABEL[meta.extra], segments: r.segments };
+      }
+    }
+  }
+
+  return [{ ref: item.ref!, heRef: item.heRef ?? heRef, segments, extra }];
+}
+
+/** Tanakh (numbered): one section per chapter, verses numbered, extra aligned per verse. */
+async function buildTanakhSections(
+  id: StudyId,
+  item: RefItem,
+  wantExtra: boolean
+): Promise<StudySection[]> {
+  const meta = getStudy(id);
+  const base = await fetchTanakh(item.ref!);
+
+  // Fetch the aligned extra (Targum / Steinsaltz) with the same chapter structure.
+  let extraBlocks: { verses: string[] }[] = [];
+  if (wantExtra && meta?.extra) {
+    const er = extraRef(id, item.ref!);
+    if (er) extraBlocks = (await fetchTanakh(er)).blocks;
+  }
+
+  return base.blocks.map((block, bi) => {
+    const heRef =
+      block.chapterNum != null && base.heTitle
+        ? `${base.heTitle} ${hebrewNumeral(block.chapterNum)}`
+        : item.heRef;
+    const segments = block.verses.map((he, vi) => ({ he, num: block.startVerse + vi }));
+
+    let extra: ExtraText | undefined;
+    const exVerses = extraBlocks[bi]?.verses;
+    if (meta?.extra && exVerses && exVerses.length > 0) {
+      extra = {
+        kind: meta.extra,
+        label: EXTRA_LABEL[meta.extra],
+        segments: exVerses.map((he) => ({ he })),
+      };
+    }
+
+    return { ref: item.ref!, heRef, segments, extra };
+  });
+}
+
+/** Resolve one study for a date into full readable content (one or more sections). */
 export async function resolveStudyContent(
   iso: string,
   id: StudyId,
   wantExtra: boolean
 ): Promise<StudyContent> {
-  const day = await resolveDay(iso);
-  const base = day.studies.find((s) => s.id === id);
+  const refs = await resolveRefs(iso);
+  const list = refs[id] ?? [];
+  const base = toResolvedStudy(id, list);
   const meta = getStudy(id);
 
-  if (!base || !meta) {
-    return {
-      id,
-      name: meta?.name ?? id,
-      color: meta?.color ?? "#a9772e",
-      ref: null,
-      heRef: null,
-      segments: [],
-    };
-  }
+  const withRef = list.filter((l) => l.ref);
+  if (withRef.length === 0) return { ...base, sections: [] };
 
-  if (!base.ref) {
-    return { ...base, segments: [] };
-  }
-
-  const baseTextP = fetchSegments(base.ref);
-
-  let extra: ExtraText | undefined;
-  if (wantExtra && meta.extra) {
-    const er = extraRef(id, base.ref);
-    if (er) {
-      const { segments } = await fetchSegments(er);
-      if (segments.length > 0) {
-        extra = { kind: meta.extra, label: EXTRA_LABEL[meta.extra], segments };
-      }
-    }
-  }
-
-  const { segments, heRef } = await baseTextP;
-
-  return {
-    ...base,
-    heRef: base.heRef ?? heRef,
-    segments,
-    extra,
-  };
+  const build = meta?.numbered ? buildTanakhSections : buildFlatSections;
+  const nested = await Promise.all(withRef.map((item) => build(id, item, wantExtra)));
+  return { ...base, sections: nested.flat() };
 }

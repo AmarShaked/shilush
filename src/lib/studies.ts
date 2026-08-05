@@ -11,6 +11,7 @@ export const STUDIES: StudyMeta[] = [
     color: "#a9772e",
     extra: "steinsaltz",
     extraDefaultOn: false,
+    numbered: false,
   },
   {
     id: "nach",
@@ -18,6 +19,7 @@ export const STUDIES: StudyMeta[] = [
     color: "#3d7a6f",
     extra: "steinsaltz",
     extraDefaultOn: false,
+    numbered: true,
   },
   {
     id: "shnayim",
@@ -25,6 +27,7 @@ export const STUDIES: StudyMeta[] = [
     color: "#9c5a52",
     extra: "targum",
     extraDefaultOn: true,
+    numbered: true,
   },
 ];
 

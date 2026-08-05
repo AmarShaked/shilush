@@ -5,6 +5,8 @@ export type StudyId = "daf" | "nach" | "shnayim";
 /** A single readable segment (verse / line) of Hebrew text. */
 export interface Segment {
   he: string;
+  /** Verse number (Tanakh only); rendered as a gematria letter. */
+  num?: number;
 }
 
 /** Extra material shown alongside the base text of a study. */
@@ -27,6 +29,8 @@ export interface StudyMeta {
   extra?: "steinsaltz" | "targum";
   /** Whether the extra is on by default (Targum yes, Steinsaltz no). */
   extraDefaultOn: boolean;
+  /** Tanakh studies show per-chapter headings and gematria verse numbers. */
+  numbered: boolean;
 }
 
 /** A study resolved for a specific date: which reference to read. */
@@ -46,8 +50,15 @@ export interface ResolvedDay {
   studies: ResolvedStudy[];
 }
 
-/** Full payload for the reader: base text plus optional extra. */
-export interface StudyContent extends ResolvedStudy {
+/** One chapter/unit of a study: its text plus optional aligned extra material. */
+export interface StudySection {
+  ref: string | null;
+  heRef: string | null;
   segments: Segment[];
   extra?: ExtraText;
+}
+
+/** Full payload for the reader: one or more sections (Nach = 2 chapters/day). */
+export interface StudyContent extends ResolvedStudy {
+  sections: StudySection[];
 }

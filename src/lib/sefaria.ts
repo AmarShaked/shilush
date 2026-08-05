@@ -78,6 +78,69 @@ export async function fetchSegments(
   return { segments, heRef: data.heRef ?? null };
 }
 
+interface V3Structured extends V3Response {
+  sections?: (string | number)[];
+  heTitle?: string;
+}
+
+/** One chapter of Tanakh text: chapter number, first verse number, and verse strings. */
+export interface ChapterBlock {
+  chapterNum: number | null;
+  startVerse: number;
+  verses: string[];
+}
+
+/**
+ * Fetch a Tanakh reference structured by chapter, preserving verse numbering.
+ * A single-chapter ref returns one block; a multi-chapter range returns one
+ * block per chapter (with the correct starting verse for each).
+ */
+export async function fetchTanakh(
+  ref: string
+): Promise<{ heTitle: string | null; heRef: string | null; blocks: ChapterBlock[] }> {
+  const url = `${SEFARIA}/v3/texts/${encodeURIComponent(ref)}?version=source`;
+  let data: V3Structured;
+  try {
+    const res = await fetch(url, {
+      headers: { accept: "application/json" },
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return { heTitle: null, heRef: null, blocks: [] };
+    data = (await res.json()) as V3Structured;
+  } catch {
+    return { heTitle: null, heRef: null, blocks: [] };
+  }
+
+  const text = data.versions?.[0]?.text;
+  const sections = (data.sections ?? []).map((s) => Number(s));
+  const blocks: ChapterBlock[] = [];
+
+  if (Array.isArray(text) && text.length > 0) {
+    if (typeof text[0] === "string") {
+      // Single chapter: flat verse array.
+      blocks.push({
+        chapterNum: Number.isFinite(sections[0]) ? sections[0] : null,
+        startVerse: sections.length >= 2 ? sections[1] : 1,
+        verses: (text as string[]).map(clean),
+      });
+    } else {
+      // Multi-chapter range: one sub-array per (consecutive) chapter.
+      const startChap = Number.isFinite(sections[0]) ? sections[0] : null;
+      const startVerse0 = sections.length >= 2 ? sections[1] : 1;
+      (text as unknown[]).forEach((sub, j) => {
+        const verses = Array.isArray(sub) ? (sub as string[]).map(clean) : [];
+        blocks.push({
+          chapterNum: startChap != null ? startChap + j : null,
+          startVerse: j === 0 ? startVerse0 : 1,
+          verses,
+        });
+      });
+    }
+  }
+
+  return { heTitle: data.heTitle ?? null, heRef: data.heRef ?? null, blocks };
+}
+
 interface CalendarItem {
   title?: { en?: string; he?: string };
   displayValue?: { en?: string; he?: string };

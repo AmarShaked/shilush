@@ -343,6 +343,25 @@ button {
   line-height: 1.85;
   color: var(--muted);
 }
+.chapter-heading {
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--gold);
+  text-align: center;
+  margin: 8px 0 18px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+section + section .chapter-heading {
+  margin-top: 26px;
+}
+.pnum {
+  color: var(--faint);
+  font-size: 0.62em;
+  vertical-align: 0.35em;
+  margin-inline-end: 6px;
+  font-feature-settings: normal;
+}
 .pasuk {
   margin-bottom: 6px;
 }
