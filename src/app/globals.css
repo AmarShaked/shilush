@@ -520,6 +520,10 @@ section + section .chapter-heading {
   border-color: var(--gold);
   font-weight: 700;
 }
+.cal-day.selected {
+  background: color-mix(in srgb, var(--gold) 28%, var(--surface-2));
+  border-color: var(--gold);
+}
 .cal-day.future {
   opacity: 0.4;
 }
@@ -554,6 +558,22 @@ section + section .chapter-heading {
   height: 9px;
   border-radius: 50%;
 }
+.day-panel {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.day-panel-head {
+  text-align: center;
+  font-size: 15px;
+  color: var(--gold);
+  margin-bottom: 14px;
+}
+.day-panel .study-card {
+  width: 100%;
+  text-align: inherit;
+}
+
 .jump-btn {
   display: block;
   width: calc(100% - 8px);
