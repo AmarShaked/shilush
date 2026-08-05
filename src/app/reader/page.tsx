@@ -99,7 +99,8 @@ function ReaderInner() {
   const title = content?.heRef ?? content?.ref ?? meta.name;
   const hasText = !!content && content.segments.length > 0;
   const showTargum = extraOn && content?.extra?.kind === "targum";
-  const showSteinsaltzVerses = extraOn && content?.extra?.kind === "steinsaltz";
+  // Steinsaltz is always available — every pasuk is tappable, no toggle needed.
+  const showSteinsaltzVerses = content?.extra?.kind === "steinsaltz";
 
   return (
     <main style={{ "--accent": meta.color } as React.CSSProperties}>
@@ -145,7 +146,7 @@ function ReaderInner() {
         </div>
       ) : (
         <>
-          {meta.extra && content?.extra && (
+          {content?.extra?.kind === "targum" && (
             <div style={{ padding: "0 18px" }}>
               <button
                 className={`extra-toggle${extraOn ? " on" : ""}`}
@@ -154,9 +155,11 @@ function ReaderInner() {
                 {extraOn ? "✓ " : ""}
                 {content.extra.label}
               </button>
-              {showSteinsaltzVerses && (
-                <div className="extra-hint">הקש על פסוק כדי לפתוח את הביאור</div>
-              )}
+            </div>
+          )}
+          {showSteinsaltzVerses && (
+            <div style={{ padding: "0 18px" }}>
+              <div className="extra-hint">הקש על פסוק כדי לפתוח את ביאור שטיינזלץ</div>
             </div>
           )}
 
