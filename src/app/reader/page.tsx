@@ -19,6 +19,11 @@ function ReaderInner() {
   const [loaded, setLoaded] = useState<{ key: string; data: StudyContent } | null>(null);
   // Per-study override of the extra toggle; falls back to each study's default.
   const [extraByStudy, setExtraByStudy] = useState<Partial<Record<StudyId, boolean>>>({});
+  // Which pesukim have their Steinsaltz perush expanded, scoped to the current day+study.
+  const [expandedState, setExpandedState] = useState<{ key: string; map: Record<number, boolean> }>({
+    key: "",
+    map: {},
+  });
 
   const meta = getStudy(studyId)!;
   const extraOn = extraByStudy[studyId] ?? meta.extraDefaultOn;
@@ -65,6 +70,14 @@ function ReaderInner() {
   const content = loading ? null : loaded!.data;
   const done = isComplete(date, studyId);
 
+  const expanded = expandedState.key === key ? expandedState.map : {};
+  function toggleVerse(i: number) {
+    setExpandedState((prev) => {
+      const base = prev.key === key ? prev.map : {};
+      return { key, map: { ...base, [i]: !base[i] } };
+    });
+  }
+
   // Scroll-progress bar + auto-complete on reaching the end.
   const onScroll = useCallback(() => {
     const doc = document.documentElement;
@@ -86,7 +99,7 @@ function ReaderInner() {
   const title = content?.heRef ?? content?.ref ?? meta.name;
   const hasText = !!content && content.segments.length > 0;
   const showTargum = extraOn && content?.extra?.kind === "targum";
-  const showSteinsaltz = extraOn && content?.extra?.kind === "steinsaltz";
+  const showSteinsaltzVerses = extraOn && content?.extra?.kind === "steinsaltz";
 
   return (
     <main style={{ "--accent": meta.color } as React.CSSProperties}>
@@ -141,35 +154,49 @@ function ReaderInner() {
                 {extraOn ? "✓ " : ""}
                 {content.extra.label}
               </button>
+              {showSteinsaltzVerses && (
+                <div className="extra-hint">הקש על פסוק כדי לפתוח את הביאור</div>
+              )}
             </div>
           )}
 
           <div className="reader-body">
-            {showTargum
-              ? content!.segments.map((seg, i) => (
-                  <div key={i} className="verse">
-                    {seg.he}
-                    {content!.extra!.segments[i] && (
-                      <span className="targum">{content!.extra!.segments[i].he}</span>
-                    )}
-                  </div>
-                ))
-              : content!.segments.map((seg, i) => (
-                  <p key={i} className="verse">
-                    {seg.he}
-                  </p>
-                ))}
-
-            {showSteinsaltz && content?.extra && (
-              <div className="steinsaltz">
-                <span className="lbl">{content.extra.label}</span>
-                {content.extra.segments.map((seg, i) => (
-                  <p key={i} style={{ margin: "0 0 8px" }}>
-                    {seg.he}
-                  </p>
-                ))}
-              </div>
-            )}
+            {showSteinsaltzVerses
+              ? content!.segments.map((seg, i) => {
+                  const perush = content!.extra!.segments[i];
+                  const open = !!expanded[i];
+                  return (
+                    <div key={i} className={`pasuk${open ? " open" : ""}`}>
+                      <p
+                        className={`pasuk-text${perush ? " tappable" : ""}`}
+                        onClick={perush ? () => toggleVerse(i) : undefined}
+                      >
+                        {seg.he}
+                        {perush && <span className="pasuk-caret">﹀</span>}
+                      </p>
+                      {open && perush && (
+                        <div className="steinsaltz">
+                          <span className="lbl">{content!.extra!.label}</span>
+                          <p style={{ margin: 0 }}>{perush.he}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              : showTargum
+                ? content!.segments.map((seg, i) => (
+                    <div key={i} className="verse">
+                      {seg.he}
+                      {content!.extra!.segments[i] && (
+                        <span className="targum">{content!.extra!.segments[i].he}</span>
+                      )}
+                    </div>
+                  ))
+                : content!.segments.map((seg, i) => (
+                    <p key={i} className="verse">
+                      {seg.he}
+                    </p>
+                  ))}
           </div>
 
           <button
