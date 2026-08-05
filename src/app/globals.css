@@ -357,8 +357,8 @@ section + section .chapter-heading {
 }
 .pnum {
   color: var(--faint);
-  font-size: 0.62em;
-  vertical-align: 0.35em;
+  font-size: 0.66em;
+  vertical-align: middle;
   margin-inline-end: 6px;
   font-feature-settings: normal;
 }
