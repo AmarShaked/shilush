@@ -294,6 +294,7 @@ button {
   font-size: 22px;
   margin-top: 6px;
   color: var(--ink);
+  text-align: center;
 }
 .tabs {
   display: flex;
@@ -301,6 +302,7 @@ button {
   margin-top: 12px;
   overflow-x: auto;
   scrollbar-width: none;
+  justify-content: center;
 }
 .tabs::-webkit-scrollbar {
   display: none;
