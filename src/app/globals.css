@@ -266,7 +266,7 @@ button {
   position: sticky;
   top: 0;
   background: var(--bg);
-  padding: 14px 18px 10px;
+  padding: 18px 18px 16px;
   z-index: 20;
   border-bottom: 1px solid var(--border);
 }
@@ -292,14 +292,14 @@ button {
 }
 .reader-title {
   font-size: 22px;
-  margin-top: 6px;
+  margin-top: 16px;
   color: var(--ink);
   text-align: center;
 }
 .tabs {
   display: flex;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 18px;
   overflow-x: auto;
   scrollbar-width: none;
   justify-content: center;
