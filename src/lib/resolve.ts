@@ -1,8 +1,9 @@
 // Resolves studies for a date into references and full text.
-// Server-side: combines Sefaria (Daf, Parasha, texts) and Hebcal (Nach Yomi).
+// Schedule (which daf / chapters / aliyah) is computed locally in hebcal.ts;
+// only the text itself is fetched from Sefaria (sefaria.ts).
 
-import { fetchCalendars, fetchSegments, fetchTanakh } from "./sefaria";
-import { fetchNachChapters, fetchDailyAliyah } from "./hebcal";
+import { fetchSegments, fetchTanakh } from "./sefaria";
+import { dafYomiRef, nachChapters, dailyAliyah } from "./hebcal";
 import { STUDIES, getStudy } from "./studies";
 import { hebrewNumeral } from "./dates";
 import type {
@@ -16,17 +17,14 @@ import type {
 
 type RefItem = { ref: string | null; heRef: string | null };
 
-/** Per-study ordered list of references for a date (Nach has two chapters). */
-async function resolveRefs(iso: string): Promise<Record<StudyId, RefItem[]>> {
-  const [cal, nach, aliyah] = await Promise.all([
-    fetchCalendars(iso),
-    fetchNachChapters(iso),
-    fetchDailyAliyah(iso), // Shnayim Mikra: only today's aliyah of the parasha
-  ]);
+/** Per-study ordered list of references for a date (all computed locally). */
+function resolveRefs(iso: string): Record<StudyId, RefItem[]> {
+  const daf = dafYomiRef(iso);
+  const aliyah = dailyAliyah(iso); // Shnayim Mikra: only today's aliyah of the parasha
   return {
-    daf: cal.daf.ref ? [cal.daf] : [],
-    nach,
-    shnayim: aliyah?.ref ? [{ ref: aliyah.ref, heRef: aliyah.heRef }] : [],
+    daf: daf.ref ? [daf] : [],
+    nach: nachChapters(iso),
+    shnayim: aliyah ? [aliyah] : [],
   };
 }
 
@@ -51,7 +49,7 @@ function toResolvedStudy(id: StudyId, list: RefItem[]): ResolvedStudy {
 
 /** Resolve the studies (display refs) for an ISO date. */
 export async function resolveDay(iso: string): Promise<ResolvedDay> {
-  const refs = await resolveRefs(iso);
+  const refs = resolveRefs(iso);
   const studies = STUDIES.map((meta) => toResolvedStudy(meta.id, refs[meta.id]));
   return { date: iso, studies };
 }
@@ -136,7 +134,7 @@ export async function resolveStudyContent(
   id: StudyId,
   wantExtra: boolean
 ): Promise<StudyContent> {
-  const refs = await resolveRefs(iso);
+  const refs = resolveRefs(iso);
   const list = refs[id] ?? [];
   const base = toResolvedStudy(id, list);
   const meta = getStudy(id);

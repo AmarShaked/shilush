@@ -1,94 +1,107 @@
-// Nach Yomi schedule via the Hebcal JSON API.
-// Sefaria's calendar API does not publish Nach Yomi, so we resolve the daily
-// chapters from Hebcal (whose titles double as Sefaria refs, e.g. "Isaiah 28")
-// and fetch the chapter text itself from Sefaria.
+// Learning schedules computed locally with the Hebcal libraries (no network):
+//   @hebcal/core     – Hebrew dates + weekly parasha (Sedra)
+//   @hebcal/learning – Daf Yomi, Nach Yomi
+//   @hebcal/leyning  – parasha aliyah (verse ranges)
+// Only the study *text* is fetched remotely (from Sefaria); the *schedule* — which
+// daf / chapters / aliyah to learn — is derived here, offline.
 
-import { addDays, diffDays, fromISODate } from "./dates";
+import { HDate, getSedra, Locale } from "@hebcal/core";
+import { DafYomi, DafYomiEvent, NachYomiIndex, NachYomiEvent } from "@hebcal/learning";
+import { getLeyningForParsha } from "@hebcal/leyning";
+import { diffDays } from "./dates";
 
-const HEBCAL = "https://www.hebcal.com/hebcal";
-
-// Shnayim Mikra: the parasha is split into its 7 aliyot, one learned per day
-// (Sunday = 1st aliyah … Shabbat = 7th).
-const ALIYAH_NAMES = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שביעי"];
+const IL = true; // Israel schedule (matches the rest of the app)
 
 // This user's Nach program: 2 chapters/day, started 2026-05-22 at Joshua 1–2.
 const NACH_START = "2026-05-22";
 const NACH_PER_DAY = 2;
+// A date on which Nach Yomi (1/day) reads Joshua 1 — used to map a linear chapter
+// index onto the schedule. Verified: 2026-02-12 = Joshua 1, +174 days = Isaiah 28.
+const NACH_ANCHOR = { y: 2026, m: 1, d: 12 }; // JS month is 0-based (1 = February)
 
-// Hebcal's OU Nach Yomi cycle advances one chapter/day and anchors at
-// 2026-02-12 = Joshua 1 (linear chapter index 0). Verified: 2026-08-05 -> Isaiah 28.
-// We use it purely as an ordered chapter enumerator: linear index L is the Nach
-// chapter on Hebcal date (anchor + L days).
-const HEBCAL_ANCHOR = "2026-02-12";
+// Shnayim Mikra: the parasha split into 7 aliyot, one per weekday (Sun = 1 … Shabbat = 7).
+const ALIYAH_NAMES = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שביעי"];
 
-interface HebcalItem {
-  title?: string;
-  hebrew?: string;
-  category?: string;
-  date?: string;
-  leyning?: Record<string, string>;
-}
-interface HebcalResponse {
-  items?: HebcalItem[];
+type RefItem = { ref: string; heRef: string | null };
+
+const HEBREW_MARKS = /[֑-ֽֿ-ׇ]/g; // niqqud + cantillation
+const stripNikud = (s: string) => s.replace(HEBREW_MARKS, "").trim();
+
+function hdFromISO(iso: string): HDate {
+  return new HDate(new Date(iso + "T12:00:00"));
 }
 
-async function fetchNachRange(
-  start: string,
-  end: string
-): Promise<{ ref: string; heRef: string | null }[]> {
-  const url = `${HEBCAL}?v=1&cfg=json&nyomi=on&start=${start}&end=${end}`;
+/** Today's Daf Yomi reference, e.g. { ref: "Chullin 97", heRef: "חולין צ״ז" }. */
+export function dafYomiRef(iso: string): RefItem {
+  const hd = hdFromISO(iso);
+  const daf = new DafYomi(hd);
+  const ref = `${daf.name} ${daf.blatt}`;
+  let heRef: string | null = null;
   try {
-    const res = await fetch(url, {
-      headers: { accept: "application/json" },
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as HebcalResponse;
-    return (data.items ?? [])
-      .filter((i) => i.category === "nachyomi" && i.title)
-      .map((i) => ({ ref: i.title!, heRef: i.hebrew ?? null }));
+    // render('he') → "דף יומי: חולין דף צ״ז"; reduce to "חולין צ״ז".
+    const he = stripNikud(new DafYomiEvent(hd).render("he"));
+    const afterColon = he.includes(":") ? he.slice(he.indexOf(":") + 1) : he;
+    heRef = afterColon.replace(/דף\s+/, "").trim() || null;
   } catch {
-    return [];
+    heRef = null;
   }
+  return { ref, heRef };
 }
 
-/** Resolve the (2) Nach Yomi chapters for an ISO date, per this user's schedule. */
-export async function fetchNachChapters(
-  iso: string
-): Promise<{ ref: string; heRef: string | null }[]> {
+/** The two Nach Yomi chapters for a date, per this user's 2-chapters/day schedule. */
+export function nachChapters(iso: string): RefItem[] {
   const dayIndex = diffDays(iso, NACH_START);
   if (dayIndex < 0) return []; // before the cycle started
   const linearStart = dayIndex * NACH_PER_DAY;
-  const start = addDays(HEBCAL_ANCHOR, linearStart);
-  const end = addDays(start, NACH_PER_DAY - 1);
-  return fetchNachRange(start, end);
+  const nyi = new NachYomiIndex();
+  const out: RefItem[] = [];
+  for (let k = 0; k < NACH_PER_DAY; k++) {
+    const hd = new HDate(new Date(NACH_ANCHOR.y, NACH_ANCHOR.m, NACH_ANCHOR.d + linearStart + k));
+    const r = nyi.lookup(hd);
+    let heRef: string | null = null;
+    try {
+      heRef = stripNikud(new NachYomiEvent(hd, r).render("he")) || null;
+    } catch {
+      heRef = null;
+    }
+    out.push({ ref: `${r.k} ${r.v}`, heRef });
+  }
+  return out;
 }
 
-/**
- * Resolve the daily Shnayim Mikra portion: the aliyah of the week's parasha for
- * the current weekday (Sunday = 1st … Shabbat = 7th). Returns the Sefaria ref
- * for that aliyah plus a Hebrew label like "ראה · רביעי".
- */
-export async function fetchDailyAliyah(
-  iso: string
-): Promise<{ ref: string; heRef: string | null } | null> {
-  const weekday = fromISODate(iso).getDay(); // 0 = Sunday … 6 = Shabbat
-  const shabbat = addDays(iso, 6 - weekday); // the week's Torah-reading Shabbat
-  const url = `${HEBCAL}?v=1&cfg=json&s=on&i=on&leyning=on&start=${shabbat}&end=${shabbat}`;
+/** The daily Shnayim Mikra aliyah of the week's parasha, or null on a holiday week. */
+export function dailyAliyah(iso: string): RefItem | null {
+  const hd = hdFromISO(iso);
+  const weekday = hd.getDay(); // 0 = Sunday … 6 = Shabbat
+  const shabbat = new Date(iso + "T12:00:00");
+  shabbat.setDate(shabbat.getDate() + (6 - weekday)); // the week's reading Shabbat
+  const shabbatHd = new HDate(shabbat);
+
+  const look = getSedra(shabbatHd.getFullYear(), IL).lookup(shabbatHd.abs());
+  const parshaList = look?.parsha;
+  if (look?.chag || !parshaList || parshaList.length === 0) return null;
+  const name = parshaList.join("-");
+
+  let aliyah: { k: string; b: string; e: string } | undefined;
   try {
-    const res = await fetch(url, {
-      headers: { accept: "application/json" },
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as HebcalResponse;
-    const item = data.items?.find((i) => i.category === "parashat" && i.leyning);
-    const ref = item?.leyning?.[String(weekday + 1)];
-    if (!ref) return null;
-    const parasha = (item!.hebrew ?? "").replace(/^פרשת\s*/, "");
-    const heRef = parasha ? `${parasha} · ${ALIYAH_NAMES[weekday]}` : ALIYAH_NAMES[weekday];
-    return { ref, heRef };
+    aliyah = getLeyningForParsha(name).fullkriyah?.[String(weekday + 1)];
   } catch {
     return null;
   }
+  if (!aliyah) return null;
+
+  const heName = parshaList
+    .map((p) => {
+      try {
+        return stripNikud(Locale.gettext(p, "he")) || p;
+      } catch {
+        return p;
+      }
+    })
+    .join("־");
+
+  return {
+    ref: `${aliyah.k} ${aliyah.b}-${aliyah.e}`,
+    heRef: `${heName} · ${ALIYAH_NAMES[weekday]}`,
+  };
 }

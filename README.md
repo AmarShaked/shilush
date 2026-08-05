@@ -27,12 +27,13 @@ npm run lint
 ## How it works
 
 - **Content**: fetched from the [Sefaria](https://www.sefaria.org) public API.
-  - Daf Yomi ref + Parashat Hashavua ref → Sefaria `/api/calendars`.
-  - Nach Yomi → [Hebcal](https://www.hebcal.com) (`nyomi=on`), since Sefaria's calendar
-    API does not publish a Nach Yomi schedule; the chapter text still comes from Sefaria.
-  - Full text via Sefaria `/api/v3/texts`; Targum Onkelos via `Onkelos <ref>`;
-    Steinsaltz Hebrew elucidation via `Steinsaltz on <ref>` (toggle on Daf & Nach).
-  - Server-side route handlers (`/api/day`, `/api/study`) proxy Sefaria/Hebcal.
+  - **Schedule is computed locally, offline** (`src/lib/hebcal.ts`) with the Hebcal
+    libraries — no network: Daf Yomi & Nach Yomi via `@hebcal/learning`, the parasha
+    via `@hebcal/core` (`Sedra`), and the daily aliyah verse ranges via `@hebcal/leyning`.
+  - **Text is fetched from Sefaria** `/api/v3/texts`; Targum Onkelos via `Onkelos <ref>`;
+    Steinsaltz Hebrew elucidation via `Steinsaltz on <ref>`.
+  - Server-side route handlers (`/api/day`, `/api/study`) build the refs locally and
+    fetch text from Sefaria.
 - **Tracking**: completions + streak live in `localStorage` behind a single module
   (`src/lib/progressStore.ts`) so a synced backend could replace it later.
 - **Studies registry** (`src/lib/studies.ts`) is the extension point — add a new
