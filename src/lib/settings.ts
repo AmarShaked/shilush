@@ -11,6 +11,7 @@ export type Theme = "light" | "dark";
 
 export interface Settings {
   fontScale: number; // 1 = default reading size
+  font: string; // font key (see FONTS)
   studies: Record<StudyId, boolean>;
 }
 
@@ -18,8 +19,24 @@ export const FONT_MIN = 0.8;
 export const FONT_MAX = 1.6;
 export const FONT_STEP = 0.1;
 
+/** Selectable Hebrew fonts. `css` is the font-family value applied to the app. */
+export interface FontOption {
+  key: string;
+  label: string;
+  css: string;
+}
+export const FONTS: FontOption[] = [
+  { key: "shofar", label: "שופר", css: '"Shofar"' },
+  { key: "frank", label: "פרנק רוהל", css: "var(--font-frank)" },
+  { key: "david", label: "דוד", css: "var(--font-david)" },
+  { key: "notoserif", label: "נוטו סריף", css: "var(--font-notoserif)" },
+  { key: "assistant", label: "אסיסטנט", css: "var(--font-assistant)" },
+];
+const FONT_KEYS = FONTS.map((f) => f.key);
+
 const DEFAULTS: Settings = {
   fontScale: 1,
+  font: "shofar",
   studies: { daf: true, nach: true, shnayim: true, rambam: false },
 };
 
@@ -47,6 +64,7 @@ function read(): Settings {
     const fs = typeof p.fontScale === "number" ? p.fontScale : 1;
     return {
       fontScale: Math.min(FONT_MAX, Math.max(FONT_MIN, fs)),
+      font: typeof p.font === "string" && FONT_KEYS.includes(p.font) ? p.font : "shofar",
       studies: {
         daf: p.studies?.daf !== false,
         nach: p.studies?.nach !== false,
@@ -65,6 +83,7 @@ function write(s: Settings): void {
       window.localStorage.setItem(KEY, JSON.stringify(s));
     } catch {}
     applyFontScale(s.fontScale);
+    applyFont(s.font);
   }
   notify();
 }
@@ -100,6 +119,17 @@ export function setFontScale(v: number): void {
 export function applyFontScale(v: number): void {
   if (typeof document !== "undefined") {
     document.documentElement.style.setProperty("--reader-scale", String(v));
+  }
+}
+
+export function setFont(key: string): void {
+  write({ ...read(), font: key });
+}
+
+/** Apply the chosen font via a data attribute (CSS maps it to --app-font). */
+export function applyFont(key: string): void {
+  if (typeof document !== "undefined") {
+    document.documentElement.setAttribute("data-font", key || "shofar");
   }
 }
 

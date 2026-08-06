@@ -5,8 +5,10 @@ import {
   getSettings,
   setFontScale,
   setStudyEnabled,
+  setFont,
   getTheme,
   setTheme,
+  FONTS,
   FONT_MIN,
   FONT_MAX,
   FONT_STEP,
@@ -75,6 +77,27 @@ export default function SettingsPage() {
           </div>
         </div>
         <div className="font-preview">בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁמַיִם וְאֵת הָאָרֶץ.</div>
+      </div>
+
+      {/* Font family */}
+      <div className="settings-group">
+        <span className="label">גופן</span>
+        {FONTS.map((f) => (
+          <button
+            key={f.key}
+            className={`setting-row font-option${settings.font === f.key ? " selected" : ""}`}
+            onClick={() => setFont(f.key)}
+            style={{ fontFamily: f.css }}
+          >
+            <div>
+              <div className="row-title">{f.label}</div>
+              <div className="row-sub" style={{ fontFamily: f.css, fontSize: 15 }}>
+                אֵת הַשָּׁמַיִם וְאֵת הָאָרֶץ
+              </div>
+            </div>
+            {settings.font === f.key && <span style={{ color: "var(--gold)", fontSize: 18 }}>✓</span>}
+          </button>
+        ))}
       </div>
 
       {/* Studies */}

@@ -64,11 +64,27 @@ html {
   background: var(--bg);
 }
 
+/* Selected reading font (Settings → גופן), mapped from the data-font attribute. */
+:root[data-font="frank"] {
+  --app-font: var(--font-frank);
+}
+:root[data-font="david"] {
+  --app-font: var(--font-david);
+}
+:root[data-font="notoserif"] {
+  --app-font: var(--font-notoserif);
+}
+:root[data-font="assistant"] {
+  --app-font: var(--font-assistant);
+}
+/* shofar / unset → falls back to the bundled Shofar face */
+
 body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: "Shofar", "Assistant", system-ui, -apple-system, sans-serif;
+  font-family: var(--app-font, "Shofar"), "Frank Ruhl Libre", "Assistant", system-ui,
+    -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   transition: background 0.3s, color 0.3s;
 }
@@ -655,6 +671,15 @@ section + section .chapter-heading {
   padding: 14px 16px;
   margin-bottom: 10px;
   box-shadow: var(--shadow);
+}
+.setting-row.selected {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 8%, var(--surface));
+}
+.font-option {
+  width: 100%;
+  text-align: inherit;
+  color: var(--ink);
 }
 .setting-row .row-title {
   font-size: 16px;

@@ -1,7 +1,25 @@
 import type { Metadata, Viewport } from "next";
+import { Frank_Ruhl_Libre, David_Libre, Noto_Serif_Hebrew, Assistant } from "next/font/google";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+
+// Self-hosted Hebrew fonts (selectable in Settings). Each exposes a CSS variable.
+const frank = Frank_Ruhl_Libre({ subsets: ["hebrew"], variable: "--font-frank", display: "swap" });
+const david = David_Libre({
+  subsets: ["hebrew"],
+  weight: ["400", "500", "700"],
+  variable: "--font-david",
+  display: "swap",
+});
+const notoSerif = Noto_Serif_Hebrew({
+  subsets: ["hebrew"],
+  variable: "--font-notoserif",
+  display: "swap",
+});
+const assistant = Assistant({ subsets: ["hebrew"], variable: "--font-assistant", display: "swap" });
+
+const fontVars = `${frank.variable} ${david.variable} ${notoSerif.variable} ${assistant.variable}`;
 
 export const metadata: Metadata = {
   title: "שילוש · לימוד יומי",
@@ -39,6 +57,7 @@ const themeBootstrap = `
     var st = JSON.parse(localStorage.getItem('shilush:settings:v1') || '{}');
     var fs = typeof st.fontScale === 'number' ? st.fontScale : 1;
     document.documentElement.style.setProperty('--reader-scale', String(fs));
+    document.documentElement.setAttribute('data-font', typeof st.font === 'string' ? st.font : 'shofar');
   } catch (e) {}
 })();
 `;
@@ -47,9 +66,9 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="he" dir="rtl" suppressHydrationWarning>
+    <html lang="he" dir="rtl" className={fontVars} suppressHydrationWarning>
       <body>
-        <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
+        <script suppressHydrationWarning dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
         <div className="app">{children}</div>
         <BottomNav />
         <ServiceWorkerRegister />

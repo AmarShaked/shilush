@@ -4,14 +4,15 @@
 
 import type { StudyId, StudyMeta } from "./types";
 
+// Order here is the display order everywhere (Home, reader tabs, calendar, settings).
 export const STUDIES: StudyMeta[] = [
   {
-    id: "daf",
-    name: "דף יומי",
-    color: "#a9772e",
-    extra: "steinsaltz",
-    extraDefaultOn: false,
-    numbered: false,
+    id: "shnayim",
+    name: "שניים מקרא",
+    color: "#9c5a52",
+    extra: "targum",
+    extraDefaultOn: true,
+    numbered: true,
   },
   {
     id: "nach",
@@ -22,12 +23,12 @@ export const STUDIES: StudyMeta[] = [
     numbered: true,
   },
   {
-    id: "shnayim",
-    name: "שניים מקרא",
-    color: "#9c5a52",
-    extra: "targum",
-    extraDefaultOn: true,
-    numbered: true,
+    id: "daf",
+    name: "דף יומי",
+    color: "#a9772e",
+    extra: "steinsaltz",
+    extraDefaultOn: false,
+    numbered: false,
   },
   {
     id: "rambam",
