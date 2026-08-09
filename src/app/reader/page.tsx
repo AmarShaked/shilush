@@ -15,6 +15,27 @@ function VerseNum({ seg }: { seg: Segment }) {
   return <span className="pnum">{hebrewNumeral(seg.num, false)}</span>;
 }
 
+/**
+ * Renders a segment honoring source emphasis: Steinsaltz bolds the quoted
+ * scripture words and keeps its own elucidation in regular weight (like Sefaria).
+ */
+function SegmentText({ seg }: { seg: Segment }) {
+  if (!seg.parts) return <>{seg.he}</>;
+  return (
+    <>
+      {seg.parts.map((p, i) =>
+        p.bold ? (
+          <b key={i} className="quoted">
+            {p.text}
+          </b>
+        ) : (
+          <span key={i}>{p.text}</span>
+        )
+      )}
+    </>
+  );
+}
+
 function ReaderInner() {
   const params = useSearchParams();
   const initialId = params.get("id") ?? "daf";
@@ -182,7 +203,9 @@ function ReaderInner() {
                           {open && perush && (
                             <div className="steinsaltz">
                               <span className="lbl">{sec.extra!.label}</span>
-                              <p style={{ margin: 0 }}>{perush.he}</p>
+                              <p style={{ margin: 0 }}>
+                                <SegmentText seg={perush} />
+                              </p>
                             </div>
                           )}
                         </div>

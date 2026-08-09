@@ -1,7 +1,7 @@
 // Data access to the Sefaria public API (text only — the schedule is local).
 // Runs server-side (from route handlers) to avoid CORS and centralize parsing.
 
-import type { Segment } from "./types";
+import type { Segment, TextPart } from "./types";
 
 const SEFARIA = "https://www.sefaria.org/api";
 
@@ -15,18 +15,51 @@ function flatten(text: unknown, out: string[] = []): string[] {
   return out;
 }
 
-/** Strip HTML tags/footnotes and decode a few entities to plain Hebrew text. */
-function clean(s: string): string {
+function decodeEntities(s: string): string {
   return s
-    .replace(/<sup[\s\S]*?<\/sup>/gi, "")
-    .replace(/<i\s+class="footnote"[\s\S]*?<\/i>/gi, "")
-    .replace(/<[^>]+>/g, "")
     .replace(/&nbsp;|&thinsp;|&ensp;|&emsp;/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
-    .replace(/[ \t]+/g, " ")
-    .trim();
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)));
+}
+
+/** Drop footnote markup, which is noise in every version. */
+function stripNotes(s: string): string {
+  return s
+    .replace(/<sup[\s\S]*?<\/sup>/gi, "")
+    .replace(/<i\s+class="footnote"[\s\S]*?<\/i>/gi, "");
+}
+
+/**
+ * Like clean(), but preserves <b> emphasis as structured parts. Steinsaltz marks
+ * the quoted scripture words in bold and leaves its own elucidation in regular
+ * weight (as on Sefaria), so that distinction has to survive into the reader.
+ * Returns parts rather than an HTML string so nothing is injected into the DOM.
+ */
+function cleanParts(s: string): TextPart[] {
+  const src = stripNotes(s);
+  const parts: TextPart[] = [];
+  const re = /<\s*(b|strong)\s*>([\s\S]*?)<\s*\/\s*\1\s*>/gi;
+  let last = 0;
+  let m: RegExpExecArray | null;
+
+  const push = (raw: string, bold: boolean) => {
+    const text = decodeEntities(raw.replace(/<[^>]+>/g, "")).replace(/[ \t]+/g, " ");
+    if (text) parts.push({ text, bold });
+  };
+
+  while ((m = re.exec(src)) !== null) {
+    push(src.slice(last, m.index), false);
+    push(m[2], true);
+    last = m.index + m[0].length;
+  }
+  push(src.slice(last), false);
+
+  if (parts.length > 0) {
+    parts[0].text = parts[0].text.replace(/^\s+/, "");
+    parts[parts.length - 1].text = parts[parts.length - 1].text.replace(/\s+$/, "");
+  }
+  return parts.filter((p) => p.text.length > 0);
 }
 
 interface V3Response {
@@ -67,9 +100,13 @@ export async function fetchSegments(
   }
 
   const segments = flatten(text)
-    .map(clean)
-    .filter((s) => s.length > 0)
-    .map((he) => ({ he }));
+    .map((raw) => {
+      const parts = cleanParts(raw);
+      const he = parts.map((p) => p.text).join("");
+      // Only carry parts when the source actually marks emphasis.
+      return parts.some((p) => p.bold) ? { he, parts } : { he };
+    })
+    .filter((s) => s.he.length > 0);
 
   return { segments, heRef: data.heRef ?? null };
 }
@@ -79,11 +116,24 @@ interface V3Structured extends V3Response {
   heTitle?: string;
 }
 
-/** One chapter of Tanakh text: chapter number, first verse number, and verse strings. */
+/** One verse: plain text plus emphasis-aware parts when the source marks bold. */
+export interface VerseText {
+  he: string;
+  parts?: TextPart[];
+}
+
+/** One chapter of Tanakh text: chapter number, first verse number, and verses. */
 export interface ChapterBlock {
   chapterNum: number | null;
   startVerse: number;
-  verses: string[];
+  verses: VerseText[];
+}
+
+/** Convert a raw Sefaria verse string into text + optional emphasis parts. */
+function toVerse(raw: string): VerseText {
+  const parts = cleanParts(raw);
+  const he = parts.map((p) => p.text).join("");
+  return parts.some((p) => p.bold) ? { he, parts } : { he };
 }
 
 /**
@@ -117,14 +167,14 @@ export async function fetchTanakh(
       blocks.push({
         chapterNum: Number.isFinite(sections[0]) ? sections[0] : null,
         startVerse: sections.length >= 2 ? sections[1] : 1,
-        verses: (text as string[]).map(clean),
+        verses: (text as string[]).map(toVerse),
       });
     } else {
       // Multi-chapter range: one sub-array per (consecutive) chapter.
       const startChap = Number.isFinite(sections[0]) ? sections[0] : null;
       const startVerse0 = sections.length >= 2 ? sections[1] : 1;
       (text as unknown[]).forEach((sub, j) => {
-        const verses = Array.isArray(sub) ? (sub as string[]).map(clean) : [];
+        const verses = Array.isArray(sub) ? (sub as string[]).map(toVerse) : [];
         blocks.push({
           chapterNum: startChap != null ? startChap + j : null,
           startVerse: j === 0 ? startVerse0 : 1,

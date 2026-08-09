@@ -421,6 +421,11 @@ section + section .chapter-heading {
   line-height: 1.9;
   font-size: 0.9em;
 }
+/* Quoted scripture inside the Steinsaltz elucidation (bold, like Sefaria). */
+.steinsaltz .quoted {
+  font-weight: 700;
+  color: var(--ink);
+}
 .steinsaltz .lbl {
   display: block;
   font-size: 0.7em;

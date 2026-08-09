@@ -2,11 +2,19 @@
 
 export type StudyId = "daf" | "nach" | "shnayim" | "rambam";
 
+/** A run of text with optional emphasis (Steinsaltz bolds the quoted scripture). */
+export interface TextPart {
+  text: string;
+  bold: boolean;
+}
+
 /** A single readable segment (verse / line) of Hebrew text. */
 export interface Segment {
   he: string;
   /** Verse number (Tanakh only); rendered as a gematria letter. */
   num?: number;
+  /** Emphasis-aware breakdown of `he`; present where the source marks bold. */
+  parts?: TextPart[];
 }
 
 /** Extra material shown alongside the base text of a study. */

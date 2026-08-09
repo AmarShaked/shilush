@@ -13,6 +13,7 @@ import type {
   StudyContent,
   StudyId,
   StudySection,
+  TextPart,
 } from "./types";
 
 type RefItem = { ref: string | null; heRef: string | null };
@@ -107,7 +108,7 @@ async function buildTanakhSections(
   const base = await fetchTanakh(item.ref!);
 
   // Fetch the aligned extra (Targum / Steinsaltz) with the same chapter structure.
-  let extraBlocks: { verses: string[] }[] = [];
+  let extraBlocks: { verses: { he: string; parts?: TextPart[] }[] }[] = [];
   if (wantExtra && meta?.extra) {
     const er = extraRef(id, item.ref!);
     if (er) extraBlocks = (await fetchTanakh(er)).blocks;
@@ -118,7 +119,7 @@ async function buildTanakhSections(
       block.chapterNum != null && base.heTitle
         ? `${base.heTitle} ${hebrewNumeral(block.chapterNum)}`
         : item.heRef;
-    const segments = block.verses.map((he, vi) => ({ he, num: block.startVerse + vi }));
+    const segments = block.verses.map((v, vi) => ({ ...v, num: block.startVerse + vi }));
 
     let extra: ExtraText | undefined;
     const exVerses = extraBlocks[bi]?.verses;
@@ -126,7 +127,7 @@ async function buildTanakhSections(
       extra = {
         kind: meta.extra,
         label: EXTRA_LABEL[meta.extra],
-        segments: exVerses.map((he) => ({ he })),
+        segments: exVerses,
       };
     }
 
