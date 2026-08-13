@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Frank_Ruhl_Libre, David_Libre, Noto_Serif_Hebrew, Assistant } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
@@ -72,6 +73,12 @@ export default function RootLayout({
         <div className="app">{children}</div>
         <BottomNav />
         <ServiceWorkerRegister />
+        {/* Analytics */}
+        <Script
+          src="https://track-jet-two.vercel.app/track.js"
+          data-site-id="fd5b1ddf28f82afe49f49978"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
