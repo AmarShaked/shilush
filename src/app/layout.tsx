@@ -75,7 +75,7 @@ export default function RootLayout({
         <ServiceWorkerRegister />
         {/* Analytics */}
         <Script
-          src="https://track-jet-two.vercel.app/track.js"
+          src="https://nitur.dev/track.js"
           data-site-id="fd5b1ddf28f82afe49f49978"
           strategy="afterInteractive"
         />
