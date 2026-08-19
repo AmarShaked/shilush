@@ -105,6 +105,32 @@ export function isDayComplete(date: string): boolean {
 }
 
 /**
+ * Mark every enabled study of a day complete — or clear them — in one write,
+ * so a single "whole day" gesture produces one change notification.
+ * Studies the user has disabled are left untouched.
+ */
+export function setDayComplete(date: string, value: boolean): void {
+  const enabled = getEnabledStudyIds();
+  if (enabled.length === 0) return;
+  const map = read();
+  const day = { ...(map[date] ?? {}) };
+  for (const id of enabled) {
+    if (value) day[id] = true;
+    else delete day[id];
+  }
+  if (Object.keys(day).length === 0) delete map[date];
+  else map[date] = day;
+  write(map);
+}
+
+/** Flip a whole day between complete and not; returns the new state. */
+export function toggleDayComplete(date: string): boolean {
+  const next = !isDayComplete(date);
+  setDayComplete(date, next);
+  return next;
+}
+
+/**
  * Current streak: consecutive fully-complete days ending today, or ending
  * yesterday if today isn't done yet (so an unfinished today doesn't zero it out).
  */

@@ -537,6 +537,12 @@ section + section .chapter-heading {
   background: var(--surface-2);
   color: var(--chip-ink);
   border: 1px solid transparent;
+  /* a long press marks the whole day — don't let the platform hijack the hold */
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform 0.14s ease, background 0.14s ease;
 }
 .cal-day.empty {
   background: transparent;
@@ -556,6 +562,15 @@ section + section .chapter-heading {
 .cal-day.future {
   opacity: 0.4;
 }
+/* Held down: shrink toward the "whole day" mark so the hold feels deliberate. */
+.cal-day.pressing {
+  transform: scale(0.88);
+  background: color-mix(in srgb, var(--gold) 45%, var(--surface-2));
+  border-color: var(--gold);
+}
+.cal-day.full.pressing {
+  background: color-mix(in srgb, var(--gold) 65%, var(--surface-2));
+}
 .cal-dots {
   display: flex;
   gap: 3px;
@@ -568,6 +583,26 @@ section + section .chapter-heading {
 }
 .cal-day.full .cal-dots i {
   background: rgba(255, 255, 255, 0.85) !important;
+}
+.cal-toast {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--gold);
+  background: var(--chip-bg);
+  border-radius: 999px;
+  padding: 7px 12px;
+  animation: toast-in 0.18s ease;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 .legend {
   display: flex;

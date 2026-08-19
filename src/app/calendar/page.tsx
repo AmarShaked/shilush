@@ -12,10 +12,11 @@ import {
   hebrewWeekday,
   hebrewDate,
 } from "@/lib/dates";
-import { dayStatus, isDayComplete } from "@/lib/progressStore";
+import { dayStatus, isDayComplete, toggleDayComplete } from "@/lib/progressStore";
 import { isStudyEnabled } from "@/lib/settings";
 import { useProgressVersion, useHydrated } from "@/lib/useProgress";
 import { useSettingsVersion } from "@/lib/useSettings";
+import { useLongPress } from "@/lib/useLongPress";
 import type { ResolvedDay } from "@/lib/types";
 
 const HE_DOW = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
@@ -43,6 +44,7 @@ export default function CalendarPage() {
   const [firstAbs, setFirstAbs] = useState(() => monthFirstAbs(today));
   const [selected, setSelected] = useState<string | null>(null);
   const [dayInfo, setDayInfo] = useState<{ date: string; data: ResolvedDay } | null>(null);
+  const [toast, setToast] = useState<{ text: string; n: number } | null>(null);
 
   // Load the selected day's studies (refs) for the info panel.
   useEffect(() => {
@@ -86,6 +88,24 @@ export default function CalendarPage() {
     setSelected((cur) => (cur === iso ? null : iso));
   }
 
+  // Press-and-hold a day to tick every enabled study at once (hold again to undo).
+  function markWholeDay(iso: string) {
+    const done = toggleDayComplete(iso);
+    setToast((cur) => ({
+      text: done ? "היום כולו סומן כנלמד ✓" : "סימון היום בוטל",
+      n: (cur?.n ?? 0) + 1,
+    }));
+  }
+
+  const { pressing, bind } = useLongPress<string>({ onLongPress: markWholeDay, onClick: selectDay });
+
+  // Clear the confirmation a moment after the last long press.
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 1800);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   return (
     <main className="page-pad">
       <div className="cal-head">
@@ -97,7 +117,9 @@ export default function CalendarPage() {
           ›
         </button>
       </div>
-      <div className="cal-sub">הקש על יום כדי לראות את הלימודים שלו</div>
+      <div className="cal-sub">
+        הקש על יום כדי לראות את הלימודים שלו · לחיצה ארוכה לסימון היום כולו
+      </div>
 
       <div className="dow">
         {HE_DOW.map((d) => (
@@ -118,8 +140,9 @@ export default function CalendarPage() {
               key={iso}
               className={`cal-day${full ? " full" : ""}${isToday ? " today" : ""}${
                 future ? " future" : ""
-              }${selected === iso ? " selected" : ""}`}
-              onClick={() => selectDay(iso)}
+              }${selected === iso ? " selected" : ""}${pressing === iso ? " pressing" : ""}`}
+              title="לחיצה ארוכה לסימון היום כולו"
+              {...bind(iso)}
             >
               <span>{heDay}</span>
               <span className="cal-dots">
@@ -131,6 +154,8 @@ export default function CalendarPage() {
           );
         })}
       </div>
+
+      {toast && <div className="cal-toast">{toast.text}</div>}
 
       <div className="legend">
         {enabledStudies.map((s) => (
