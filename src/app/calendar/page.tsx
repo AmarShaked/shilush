@@ -60,6 +60,7 @@ export default function CalendarPage() {
   }, [selected]);
 
   const info = selected && dayInfo?.date === selected ? dayInfo.data : null;
+  const selectedFull = selected !== null && mounted && isDayComplete(selected);
 
   const { first, monthLabelISO, cells } = useMemo(() => {
     const first = new HDate(firstAbs);
@@ -197,6 +198,15 @@ export default function CalendarPage() {
                 );
               })
           )}
+
+          {/* Keyboard/tap equivalent of long-pressing the day in the grid. */}
+          <button
+            className={`day-all-btn${selectedFull ? " is-done" : ""}`}
+            aria-pressed={selectedFull}
+            onClick={() => markWholeDay(selected)}
+          >
+            {selectedFull ? "✓ כל היום נלמד · בטל סימון" : "סמן את כל היום כנלמד"}
+          </button>
         </div>
       )}
     </main>

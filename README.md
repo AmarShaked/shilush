@@ -36,8 +36,8 @@ npm run lint
     fetch text from Sefaria.
 - **Tracking**: completions + streak live in `localStorage` behind a single module
   (`src/lib/progressStore.ts`) so a synced backend could replace it later.
-  In the calendar, a **long press** on a day marks all of its active studies complete
-  at once (hold again to undo).
+  In the calendar, a **long press** on a day — or the button at the bottom of the
+  day panel — marks all of its active studies complete at once (repeat to undo).
 - **Studies registry** (`src/lib/studies.ts`) is the extension point — add a new
   track (e.g. רמב״ם יומי) with one entry plus a ref-resolver branch in `resolve.ts`.
 - **PWA**: installable (`public/manifest.webmanifest`), with a service worker
