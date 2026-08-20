@@ -125,6 +125,10 @@ export default function SettingsPage() {
           );
         })}
       </div>
+
+      <footer className="credit">
+        נבנה על ידי <a href="mailto:shakedamar@gmail.com">עמר שקד</a>
+      </footer>
     </main>
   );
 }
