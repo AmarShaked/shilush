@@ -1,5 +1,5 @@
 // Shilush service worker: offline app shell + runtime caching of study data.
-const VERSION = "shilush-v1";
+const VERSION = "shilush-v2";
 const SHELL = `${VERSION}-shell`;
 const DATA = `${VERSION}-data`;
 
@@ -11,6 +11,8 @@ const SHELL_URLS = [
   "/fonts/Shofar-Regular.ttf",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
+  "/icons/icon-maskable-192.png",
+  "/icons/icon-maskable-512.png",
 ];
 
 self.addEventListener("install", (event) => {

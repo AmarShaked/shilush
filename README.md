@@ -1,3 +1,5 @@
+<p align="center"><img src="public/logo.svg" alt="שילוש" width="300"></p>
+
 # שילוש · Shilush — Daily Torah Learning Tracker
 
 A mobile-first PWA for reading and tracking three daily Torah studies in one place:
@@ -42,6 +44,10 @@ npm run lint
   track (e.g. רמב״ם יומי) with one entry plus a ref-resolver branch in `resolve.ts`.
 - **PWA**: installable (`public/manifest.webmanifest`), with a service worker
   (`public/sw.js`) caching the app shell and last-viewed study data for offline use.
+- **Icons**: an open book with three ribbons — one per track. `public/icons/` holds the
+  `any` and padded `maskable` PNGs the manifest declares; `src/app/{favicon.ico,icon.svg,apple-icon.png}`
+  are picked up by Next's icon file conventions. The favicon is cut per size (the 16px
+  entry drops the ribbons and page rules, which turn to mush at that scale).
 
 Design spec: [`docs/superpowers/specs/2026-08-05-torah-daily-tracker-design.md`](docs/superpowers/specs/2026-08-05-torah-daily-tracker-design.md).
 
