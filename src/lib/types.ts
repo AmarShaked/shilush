@@ -15,6 +15,12 @@ export interface Segment {
   num?: number;
   /** Emphasis-aware breakdown of `he`; present where the source marks bold. */
   parts?: TextPart[];
+  /**
+   * Commentary only: the discrete glosses this note is made of. Steinsaltz on
+   * the Rambam comments on several phrases of the same halacha, and each gloss
+   * reads as its own line. `he` is their concatenation.
+   */
+  glosses?: Segment[];
 }
 
 /** Extra material shown alongside the base text of a study. */

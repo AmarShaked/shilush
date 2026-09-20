@@ -188,7 +188,9 @@ function ReaderInner() {
 
                 {isSteinsaltz
                   ? sec.segments.map((seg, i) => {
-                      const perush = sec.extra?.segments[i];
+                      // Segments the commentary says nothing about stay plain.
+                      const raw = sec.extra?.segments[i];
+                      const perush = raw?.he ? raw : undefined;
                       const vk = `${si}:${i}`;
                       const open = !!expanded[vk];
                       return (
@@ -203,9 +205,12 @@ function ReaderInner() {
                           {open && perush && (
                             <div className="steinsaltz">
                               <span className="lbl">{sec.extra!.label}</span>
-                              <p style={{ margin: 0 }}>
-                                <SegmentText seg={perush} />
-                              </p>
+                              {/* On the Rambam each glossed phrase reads as its own line. */}
+                              {(perush.glosses ?? [perush]).map((g, gi) => (
+                                <p key={gi} className="gloss">
+                                  <SegmentText seg={g} />
+                                </p>
+                              ))}
                             </div>
                           )}
                         </div>

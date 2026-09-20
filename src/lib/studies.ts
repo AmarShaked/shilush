@@ -34,6 +34,7 @@ export const STUDIES: StudyMeta[] = [
     id: "rambam",
     name: "רמב״ם יומי",
     color: "#5f6f96",
+    extra: "steinsaltz",
     extraDefaultOn: false,
     numbered: false,
     numberSegments: true, // number each halacha (א, ב, …)

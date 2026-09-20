@@ -421,6 +421,13 @@ section + section .chapter-heading {
   line-height: 1.9;
   font-size: 0.9em;
 }
+/* One gloss per line: the Rambam elucidation comments on several phrases. */
+.steinsaltz .gloss {
+  margin: 0 0 8px;
+}
+.steinsaltz .gloss:last-child {
+  margin-bottom: 0;
+}
 /* Quoted scripture inside the Steinsaltz elucidation (bold, like Sefaria). */
 .steinsaltz .quoted {
   font-weight: 700;

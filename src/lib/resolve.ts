@@ -2,7 +2,7 @@
 // Schedule (which daf / chapters / aliyah) is computed locally in hebcal.ts;
 // only the text itself is fetched from Sefaria (sefaria.ts).
 
-import { fetchSegments, fetchTanakh } from "./sefaria";
+import { fetchCommentary, fetchSegments, fetchTanakh } from "./sefaria";
 import { dafYomiRef, nachChapters, dailyAliyah, rambamChapter } from "./hebcal";
 import { STUDIES, getStudy } from "./studies";
 import { hebrewNumeral } from "./dates";
@@ -10,6 +10,7 @@ import type {
   ExtraText,
   ResolvedDay,
   ResolvedStudy,
+  Segment,
   StudyContent,
   StudyId,
   StudySection,
@@ -71,31 +72,50 @@ const EXTRA_LABEL: Record<"steinsaltz" | "targum", string> = {
   targum: "תרגום אונקלוס",
 };
 
-/** Talmud (unnumbered): a single flat section, extra aligned by segment index. */
+/** Talmud / Rambam (unnumbered): a single flat section, extra aligned by segment index. */
 async function buildFlatSections(
   id: StudyId,
   item: RefItem,
   wantExtra: boolean
 ): Promise<StudySection[]> {
   const meta = getStudy(id);
-  const raw = await fetchSegments(item.ref!);
-  const heRef = raw.heRef;
-  const segments = meta?.numberSegments
-    ? raw.segments.map((s, i) => ({ ...s, num: i + 1 }))
-    : raw.segments;
+  // Numbered studies (Rambam halachot) keep empty entries through the fetch so
+  // that both the numbering and the aligned commentary follow the source index;
+  // the empties are dropped below, after the two have been paired.
+  const numberSegments = !!meta?.numberSegments;
+  const raw = await fetchSegments(item.ref!, { keepEmpty: numberSegments });
 
-  let extra: ExtraText | undefined;
+  let notes: Segment[] = [];
   if (wantExtra && meta?.extra) {
     const er = extraRef(id, item.ref!);
-    if (er) {
-      const r = await fetchSegments(er);
-      if (r.segments.length > 0) {
-        extra = { kind: meta.extra, label: EXTRA_LABEL[meta.extra], segments: r.segments };
-      }
-    }
+    if (er) notes = await fetchCommentary(er, { grouped: numberSegments });
   }
 
-  return [{ ref: item.ref!, heRef: item.heRef ?? heRef, segments, extra }];
+  // The commentary can run short of the base text, so pad the tail.
+  const paired = raw.segments
+    .map((seg, i) => ({
+      seg: numberSegments ? { ...seg, num: i + 1 } : seg,
+      note: notes[i] ?? { he: "" },
+    }))
+    .filter((p) => p.seg.he.length > 0);
+
+  let extra: ExtraText | undefined;
+  if (meta?.extra && paired.some((p) => p.note.he.length > 0)) {
+    extra = {
+      kind: meta.extra,
+      label: EXTRA_LABEL[meta.extra],
+      segments: paired.map((p) => p.note),
+    };
+  }
+
+  return [
+    {
+      ref: item.ref!,
+      heRef: item.heRef ?? raw.heRef,
+      segments: paired.map((p) => p.seg),
+      extra,
+    },
+  ];
 }
 
 /** Tanakh (numbered): one section per chapter, verses numbered, extra aligned per verse. */

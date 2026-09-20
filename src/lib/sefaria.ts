@@ -62,53 +62,102 @@ function cleanParts(s: string): TextPart[] {
   return parts.filter((p) => p.text.length > 0);
 }
 
+/** Convert one raw Sefaria string into a segment, keeping any marked emphasis. */
+function toSegment(raw: string): Segment {
+  const parts = cleanParts(raw);
+  const he = parts.map((p) => p.text).join("");
+  return parts.some((p) => p.bold) ? { he, parts } : { he };
+}
+
 interface V3Response {
   versions?: { text?: unknown }[];
   heRef?: string;
   error?: string;
 }
 
-/**
- * Fetch a text reference from Sefaria v3 and return cleaned Hebrew segments.
- * `version` "source" requests the original-language (Hebrew/Aramaic) version.
- * Returns an empty array if the ref is missing/unavailable (caller degrades gracefully).
- */
-export async function fetchSegments(
-  ref: string,
-  version: "source" | "default" = "source"
-): Promise<{ segments: Segment[]; heRef: string | null }> {
+async function getV3(ref: string, version: "source" | "default"): Promise<V3Response | null> {
   const url =
     `${SEFARIA}/v3/texts/${encodeURIComponent(ref)}` +
     (version === "source" ? "?version=source" : "");
-
-  let data: V3Response;
   try {
     const res = await fetch(url, {
       headers: { accept: "application/json" },
       next: { revalidate: 3600 },
     });
-    if (!res.ok) return { segments: [], heRef: null };
-    data = (await res.json()) as V3Response;
+    if (!res.ok) return null;
+    return (await res.json()) as V3Response;
   } catch {
-    return { segments: [], heRef: null };
+    return null;
   }
+}
+
+/**
+ * Raw (still nested, still marked-up) text for a ref. `version` "source" asks
+ * for the original-language version and falls back to the default one when the
+ * source turns out to be empty.
+ */
+async function fetchRaw(
+  ref: string,
+  version: "source" | "default" = "source"
+): Promise<{ text: unknown; heRef: string | null }> {
+  const data = await getV3(ref, version);
+  if (!data) return { text: null, heRef: null };
 
   const text = data.versions?.[0]?.text;
-  // If the source version was empty, retry without forcing a version.
   if ((!text || (Array.isArray(text) && text.length === 0)) && version === "source") {
-    return fetchSegments(ref, "default");
+    return fetchRaw(ref, "default");
+  }
+  return { text, heRef: data.heRef ?? null };
+}
+
+/**
+ * Fetch a text reference from Sefaria and return cleaned Hebrew segments.
+ * Empty segments are dropped unless `keepEmpty` is set — studies that number
+ * their segments (Rambam halachot) need the original indexing to survive.
+ * Returns an empty array if the ref is missing/unavailable (caller degrades gracefully).
+ */
+export async function fetchSegments(
+  ref: string,
+  { keepEmpty = false }: { keepEmpty?: boolean } = {}
+): Promise<{ segments: Segment[]; heRef: string | null }> {
+  const { text, heRef } = await fetchRaw(ref);
+  const segments = flatten(text).map(toSegment);
+  return { segments: keepEmpty ? segments : segments.filter((s) => s.he.length > 0), heRef };
+}
+
+/**
+ * Fetch commentary as notes aligned by index to the base text.
+ *
+ * Both shapes Sefaria returns are nested, so the caller says which one to
+ * expect. `grouped` (the Mishneh Torah) means one entry per base segment,
+ * holding the glosses on that halacha's phrases — kept apart so each reads as
+ * its own line, and left empty where the commentary says nothing, so the
+ * halachot after it still line up. Otherwise (the Talmud, nested by amud) the
+ * whole thing flattens to one note per segment.
+ *
+ * The commentary may simply stop short of the base; the caller pads the tail.
+ */
+export async function fetchCommentary(
+  ref: string,
+  { grouped = false }: { grouped?: boolean } = {}
+): Promise<Segment[]> {
+  const { text } = await fetchRaw(ref);
+  if (!Array.isArray(text)) return [];
+
+  if (!grouped) {
+    return flatten(text)
+      .map(toSegment)
+      .filter((s) => s.he.length > 0);
   }
 
-  const segments = flatten(text)
-    .map((raw) => {
-      const parts = cleanParts(raw);
-      const he = parts.map((p) => p.text).join("");
-      // Only carry parts when the source actually marks emphasis.
-      return parts.some((p) => p.bold) ? { he, parts } : { he };
-    })
-    .filter((s) => s.he.length > 0);
-
-  return { segments, heRef: data.heRef ?? null };
+  return text.map((group) => {
+    const glosses = flatten(group)
+      .map(toSegment)
+      .filter((g) => g.he.length > 0);
+    if (glosses.length === 0) return { he: "" };
+    if (glosses.length === 1) return glosses[0];
+    return { he: glosses.map((g) => g.he).join(" "), glosses };
+  });
 }
 
 interface V3Structured extends V3Response {
@@ -116,24 +165,11 @@ interface V3Structured extends V3Response {
   heTitle?: string;
 }
 
-/** One verse: plain text plus emphasis-aware parts when the source marks bold. */
-export interface VerseText {
-  he: string;
-  parts?: TextPart[];
-}
-
 /** One chapter of Tanakh text: chapter number, first verse number, and verses. */
 export interface ChapterBlock {
   chapterNum: number | null;
   startVerse: number;
-  verses: VerseText[];
-}
-
-/** Convert a raw Sefaria verse string into text + optional emphasis parts. */
-function toVerse(raw: string): VerseText {
-  const parts = cleanParts(raw);
-  const he = parts.map((p) => p.text).join("");
-  return parts.some((p) => p.bold) ? { he, parts } : { he };
+  verses: Segment[];
 }
 
 /**
@@ -144,18 +180,8 @@ function toVerse(raw: string): VerseText {
 export async function fetchTanakh(
   ref: string
 ): Promise<{ heTitle: string | null; heRef: string | null; blocks: ChapterBlock[] }> {
-  const url = `${SEFARIA}/v3/texts/${encodeURIComponent(ref)}?version=source`;
-  let data: V3Structured;
-  try {
-    const res = await fetch(url, {
-      headers: { accept: "application/json" },
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) return { heTitle: null, heRef: null, blocks: [] };
-    data = (await res.json()) as V3Structured;
-  } catch {
-    return { heTitle: null, heRef: null, blocks: [] };
-  }
+  const data = (await getV3(ref, "source")) as V3Structured | null;
+  if (!data) return { heTitle: null, heRef: null, blocks: [] };
 
   const text = data.versions?.[0]?.text;
   const sections = (data.sections ?? []).map((s) => Number(s));
@@ -167,14 +193,14 @@ export async function fetchTanakh(
       blocks.push({
         chapterNum: Number.isFinite(sections[0]) ? sections[0] : null,
         startVerse: sections.length >= 2 ? sections[1] : 1,
-        verses: (text as string[]).map(toVerse),
+        verses: (text as string[]).map(toSegment),
       });
     } else {
       // Multi-chapter range: one sub-array per (consecutive) chapter.
       const startChap = Number.isFinite(sections[0]) ? sections[0] : null;
       const startVerse0 = sections.length >= 2 ? sections[1] : 1;
       (text as unknown[]).forEach((sub, j) => {
-        const verses = Array.isArray(sub) ? (sub as string[]).map(toVerse) : [];
+        const verses = Array.isArray(sub) ? (sub as string[]).map(toSegment) : [];
         blocks.push({
           chapterNum: startChap != null ? startChap + j : null,
           startVerse: j === 0 ? startVerse0 : 1,
