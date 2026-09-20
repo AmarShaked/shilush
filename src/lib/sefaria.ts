@@ -71,6 +71,8 @@ function toSegment(raw: string): Segment {
 
 interface V3Response {
   versions?: { text?: unknown }[];
+  /** The ref spelled the way Sefaria titles it, whatever alias was asked for. */
+  ref?: string;
   heRef?: string;
   error?: string;
 }
@@ -99,15 +101,15 @@ async function getV3(ref: string, version: "source" | "default"): Promise<V3Resp
 async function fetchRaw(
   ref: string,
   version: "source" | "default" = "source"
-): Promise<{ text: unknown; heRef: string | null }> {
+): Promise<{ text: unknown; ref: string | null; heRef: string | null }> {
   const data = await getV3(ref, version);
-  if (!data) return { text: null, heRef: null };
+  if (!data) return { text: null, ref: null, heRef: null };
 
   const text = data.versions?.[0]?.text;
   if ((!text || (Array.isArray(text) && text.length === 0)) && version === "source") {
     return fetchRaw(ref, "default");
   }
-  return { text, heRef: data.heRef ?? null };
+  return { text, ref: data.ref ?? null, heRef: data.heRef ?? null };
 }
 
 /**
@@ -119,10 +121,14 @@ async function fetchRaw(
 export async function fetchSegments(
   ref: string,
   { keepEmpty = false }: { keepEmpty?: boolean } = {}
-): Promise<{ segments: Segment[]; heRef: string | null }> {
-  const { text, heRef } = await fetchRaw(ref);
+): Promise<{ segments: Segment[]; ref: string | null; heRef: string | null }> {
+  const { text, ref: canonical, heRef } = await fetchRaw(ref);
   const segments = flatten(text).map(toSegment);
-  return { segments: keepEmpty ? segments : segments.filter((s) => s.he.length > 0), heRef };
+  return {
+    segments: keepEmpty ? segments : segments.filter((s) => s.he.length > 0),
+    ref: canonical,
+    heRef,
+  };
 }
 
 /**
@@ -179,9 +185,15 @@ export interface ChapterBlock {
  */
 export async function fetchTanakh(
   ref: string
-): Promise<{ heTitle: string | null; heRef: string | null; blocks: ChapterBlock[] }> {
+): Promise<{
+  heTitle: string | null;
+  ref: string | null;
+  heRef: string | null;
+  blocks: ChapterBlock[];
+}> {
+  const empty = { heTitle: null, ref: null, heRef: null, blocks: [] };
   const data = (await getV3(ref, "source")) as V3Structured | null;
-  if (!data) return { heTitle: null, heRef: null, blocks: [] };
+  if (!data) return empty;
 
   const text = data.versions?.[0]?.text;
   const sections = (data.sections ?? []).map((s) => Number(s));
@@ -210,5 +222,10 @@ export async function fetchTanakh(
     }
   }
 
-  return { heTitle: data.heTitle ?? null, heRef: data.heRef ?? null, blocks };
+  return {
+    heTitle: data.heTitle ?? null,
+    ref: data.ref ?? null,
+    heRef: data.heRef ?? null,
+    blocks,
+  };
 }

@@ -58,7 +58,12 @@ export async function resolveDay(iso: string): Promise<ResolvedDay> {
   return { date: iso, studies };
 }
 
-/** Build the Sefaria ref for a study's extra material (Steinsaltz / Targum). */
+/**
+ * Build the Sefaria ref for a study's extra material (Steinsaltz / Targum).
+ * `baseRef` must be the ref as Sefaria titles it: the schedule spells some
+ * books differently (Baba Metzia, Nachum), and while Sefaria resolves those
+ * aliases for the base text, "Steinsaltz on <alias>" is simply not a book.
+ */
 function extraRef(id: StudyId, baseRef: string): string | null {
   const meta = getStudy(id);
   if (!meta?.extra) return null;
@@ -87,7 +92,7 @@ async function buildFlatSections(
 
   let notes: Segment[] = [];
   if (wantExtra && meta?.extra) {
-    const er = extraRef(id, item.ref!);
+    const er = extraRef(id, raw.ref ?? item.ref!);
     if (er) notes = await fetchCommentary(er, { grouped: numberSegments });
   }
 
@@ -130,7 +135,7 @@ async function buildTanakhSections(
   // Fetch the aligned extra (Targum / Steinsaltz) with the same chapter structure.
   let extraBlocks: { verses: { he: string; parts?: TextPart[] }[] }[] = [];
   if (wantExtra && meta?.extra) {
-    const er = extraRef(id, item.ref!);
+    const er = extraRef(id, base.ref ?? item.ref!);
     if (er) extraBlocks = (await fetchTanakh(er)).blocks;
   }
 
