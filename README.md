@@ -30,8 +30,10 @@ npm run lint
 
 - **Content**: fetched from the [Sefaria](https://www.sefaria.org) public API.
   - **Schedule is computed locally, offline** (`src/lib/hebcal.ts`) with the Hebcal
-    libraries — no network: Daf Yomi & Nach Yomi via `@hebcal/learning`, the parasha
+    libraries — no network: Daf Yomi & Daily Rambam via `@hebcal/learning`, the parasha
     via `@hebcal/core` (`Sedra`), and the daily aliyah verse ranges via `@hebcal/leyning`.
+    Nach follows the printed "כל הנ״ך בשנה" calendar (Shavuot 5786 → 5787), bundled
+    day by day in `src/lib/nachSchedule.ts`.
   - **Text is fetched from Sefaria** `/api/v3/texts`; Targum Onkelos via `Onkelos <ref>`;
     Steinsaltz Hebrew elucidation via `Steinsaltz on <ref>`.
   - Server-side route handlers (`/api/day`, `/api/study`) build the refs locally and

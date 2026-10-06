@@ -1,7 +1,8 @@
 // Learning schedules computed locally with the Hebcal libraries (no network):
 //   @hebcal/core     – Hebrew dates + weekly parasha (Sedra)
-//   @hebcal/learning – Daf Yomi, Nach Yomi
+//   @hebcal/learning – Daf Yomi, Daily Rambam
 //   @hebcal/leyning  – parasha aliyah (verse ranges)
+// Nach follows a fixed printed calendar (nachSchedule.ts) rather than a library cycle.
 // Only the study *text* is fetched remotely (from Sefaria); the *schedule* — which
 // daf / chapters / aliyah to learn — is derived here, offline.
 
@@ -9,22 +10,14 @@ import { HDate, getSedra, Locale } from "@hebcal/core";
 import {
   DafYomi,
   DafYomiEvent,
-  NachYomiIndex,
-  NachYomiEvent,
   dailyRambam1,
   DailyRambamEvent,
 } from "@hebcal/learning";
 import { getLeyningForParsha } from "@hebcal/leyning";
-import { diffDays } from "./dates";
+import { diffDays, hebrewNumeral } from "./dates";
+import { NACH_SCHEDULE, NACH_SCHEDULE_START } from "./nachSchedule";
 
 const IL = true; // Israel schedule (matches the rest of the app)
-
-// This user's Nach program: 2 chapters/day, started 2026-05-22 at Joshua 1–2.
-const NACH_START = "2026-05-22";
-const NACH_PER_DAY = 2;
-// A date on which Nach Yomi (1/day) reads Joshua 1 — used to map a linear chapter
-// index onto the schedule. Verified: 2026-02-12 = Joshua 1, +174 days = Isaiah 28.
-const NACH_ANCHOR = { y: 2026, m: 1, d: 12 }; // JS month is 0-based (1 = February)
 
 // Shnayim Mikra: the parasha split into 7 aliyot, one per weekday (Sun = 1 … Shabbat = 7).
 const ALIYAH_NAMES = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שביעי"];
@@ -55,23 +48,38 @@ export function dafYomiRef(iso: string): RefItem {
   return { ref, heRef };
 }
 
-/** The two Nach Yomi chapters for a date, per this user's 2-chapters/day schedule. */
+// Hebrew titles for the Sefaria book names used in NACH_SCHEDULE.
+const NACH_HE: Record<string, string> = {
+  Joshua: "יהושע", Judges: "שופטים", "I Samuel": "שמואל א׳", "II Samuel": "שמואל ב׳",
+  "I Kings": "מלכים א׳", "II Kings": "מלכים ב׳", Isaiah: "ישעיהו", Jeremiah: "ירמיהו",
+  Ezekiel: "יחזקאל", Hosea: "הושע", Joel: "יואל", Amos: "עמוס", Obadiah: "עובדיה",
+  Jonah: "יונה", Micah: "מיכה", Nahum: "נחום", Habakkuk: "חבקוק", Zephaniah: "צפניה",
+  Haggai: "חגי", Zechariah: "זכריה", Malachi: "מלאכי", Psalms: "תהילים", Proverbs: "משלי",
+  Job: "איוב", "Song of Songs": "שיר השירים", Ruth: "רות", Lamentations: "איכה",
+  Ecclesiastes: "קהלת", Esther: "אסתר", Daniel: "דניאל", Ezra: "עזרא", Nehemiah: "נחמיה",
+  "I Chronicles": "דברי הימים א׳", "II Chronicles": "דברי הימים ב׳",
+};
+
+/**
+ * The day's Nach chapters from the printed "whole Nach in a year" calendar:
+ * one item per chapter (a verse range stays a single item, e.g. Psalms 119:1-80).
+ */
 export function nachChapters(iso: string): RefItem[] {
-  const dayIndex = diffDays(iso, NACH_START);
-  if (dayIndex < 0) return []; // before the cycle started
-  const linearStart = dayIndex * NACH_PER_DAY;
-  const nyi = new NachYomiIndex();
+  const entry = NACH_SCHEDULE[diffDays(iso, NACH_SCHEDULE_START)];
+  if (!entry) return []; // outside the calendar's year
   const out: RefItem[] = [];
-  for (let k = 0; k < NACH_PER_DAY; k++) {
-    const hd = new HDate(new Date(NACH_ANCHOR.y, NACH_ANCHOR.m, NACH_ANCHOR.d + linearStart + k));
-    const r = nyi.lookup(hd);
-    let heRef: string | null = null;
-    try {
-      heRef = stripNikud(new NachYomiEvent(hd, r).render("he")) || null;
-    } catch {
-      heRef = null;
+  for (const ref of entry.split("; ")) {
+    const m = ref.match(/^(.+) (\d+)(?::(\d+)-(\d+)|-(\d+))?$/);
+    if (!m) continue;
+    const [, book, from, v1, v2, to] = m;
+    const he = NACH_HE[book] ?? book;
+    if (v1) {
+      out.push({ ref, heRef: `${he} ${hebrewNumeral(+from)} ${hebrewNumeral(+v1)}–${hebrewNumeral(+v2)}` });
+      continue;
     }
-    out.push({ ref: `${r.k} ${r.v}`, heRef });
+    for (let c = +from; c <= +(to ?? from); c++) {
+      out.push({ ref: `${book} ${c}`, heRef: `${he} ${hebrewNumeral(c)}` });
+    }
   }
   return out;
 }
